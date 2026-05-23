@@ -7,7 +7,11 @@
     "skipLibCheck": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "@tak-ps/cloudtak": ["cloudtak_plugin_docs/plugin.ts"]
+    }
   },
   "include": ["**/*.ts", "components/**/*.vue", "env.d.ts"],
   "exclude": ["node_modules", "cloudtak_plugin_docs/example.ts"]

@@ -4,3 +4,4 @@ cloudtak_plugin_docs/
 .env.*
 *backup*
 node_modules
+.DS_Store
