@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "jsx": "preserve"
+  },
+  "include": ["**/*.ts", "components/**/*.vue", "env.d.ts"],
+  "exclude": ["node_modules", "cloudtak_plugin_docs/example.ts"]
+}

@@ -1,0 +1,6 @@
+Skydio_api_templates/
+cloudtak_plugin_docs/
+.env
+.env.*
+*backup*
+node_modules

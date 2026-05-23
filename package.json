@@ -1,0 +1,14 @@
+{
+  "name": "cloudtak-plugin-skydio",
+  "private": true,
+  "description": "Skydio integration plugin for CloudTAK",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@tak-ps/cloudtak": "*",
+    "typescript": "^5.0.0",
+    "vue": "^3.5.0"
+  }
+}
