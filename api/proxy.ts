@@ -14,6 +14,16 @@ export class ProxyError extends Error {
     }
 }
 
+function proxyHint(status: number, message: string): string {
+    if (status === 403 && /proxy/i.test(message)) {
+        return `${message} Enable Plugin Proxy in CloudTAK Admin and whitelist https://api.skydio.com.`;
+    }
+    if (status === 401) {
+        return `${message} Confirm your Skydio API token in Settings.`;
+    }
+    return message;
+}
+
 export async function proxyRequest<T = unknown>(opts: {
     url: string;
     method?: 'GET' | 'POST';
@@ -22,33 +32,41 @@ export async function proxyRequest<T = unknown>(opts: {
 }): Promise<ProxyResponse<T>> {
     const token = localStorage.token;
     if (!token) {
-        throw new ProxyError('Not authenticated', 401);
+        throw new ProxyError('Not authenticated — log in to CloudTAK first', 401);
     }
 
-    const res = await fetch('/api/proxy', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-            url: opts.url,
-            method: opts.method ?? 'GET',
-            headers: opts.headers,
-            body: opts.body,
-        }),
-    });
+    let res: Response;
+    try {
+        res = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                url: opts.url,
+                method: opts.method ?? 'GET',
+                headers: opts.headers,
+                body: opts.body,
+            }),
+        });
+    } catch (err) {
+        const message = err instanceof Error ? err.message : 'Network error';
+        throw new ProxyError(`Proxy request failed: ${message}`, 0);
+    }
+
+    let payload: unknown;
+    try {
+        payload = await res.json();
+    } catch {
+        throw new ProxyError(`Proxy returned non-JSON response (${res.status})`, res.status);
+    }
 
     if (!res.ok) {
-        let message = `Proxy request failed (${res.status})`;
-        try {
-            const err = await res.json();
-            if (err.message) message = err.message;
-        } catch {
-            // ignore parse errors
-        }
-        throw new ProxyError(message, res.status);
+        const body = payload as { message?: string };
+        const message = body.message ?? `Proxy request failed (${res.status})`;
+        throw new ProxyError(proxyHint(res.status, message), res.status);
     }
 
-    return res.json() as Promise<ProxyResponse<T>>;
+    return payload as ProxyResponse<T>;
 }

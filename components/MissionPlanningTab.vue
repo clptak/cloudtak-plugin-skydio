@@ -1,14 +1,5 @@
 <template>
-    <div class="skydio-tab">
-        <p class="placeholder">Mission Planning — Coming soon</p>
+    <div class="col-12 py-3 text-muted text-center">
+        Mission Planning — Coming soon
     </div>
 </template>
-
-<style scoped>
-.placeholder {
-    font-size: 14px;
-    color: var(--tblr-secondary, #6c757d);
-    padding: 24px 0;
-    text-align: center;
-}
-</style>

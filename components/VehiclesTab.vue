@@ -1,66 +1,80 @@
 <template>
-    <div class="skydio-tab">
-        <button
-            type="button"
-            class="btn-primary"
-            :disabled="loading || !apiKey"
-            @click="fetchVehicles"
-        >
-            Get Vehicles
-        </button>
+    <div class="col-12 py-3">
+        <div class="d-flex align-items-center mb-3">
+            <div class="h3 mb-0">
+                Vehicles
+            </div>
+            <div class="ms-auto">
+                <button
+                    type="button"
+                    class="btn btn-primary"
+                    :disabled="loading || !apiKey"
+                    @click="fetchVehicles"
+                >
+                    Get Vehicles
+                </button>
+            </div>
+        </div>
 
-        <p
+        <div
             v-if="!apiKey"
-            class="hint"
+            class="alert alert-warning"
         >
             Configure your API key in Settings first.
-        </p>
+        </div>
 
-        <p
+        <TablerLoading
+            v-if="loading"
+            :compact="true"
+            desc="Loading vehicles from Skydio…"
+        />
+
+        <TablerAlert
             v-if="error"
-            class="error"
-        >
-            {{ error }}
-        </p>
+            :err="error"
+        />
 
         <div
             v-if="vehicles.length === 0 && !loading && apiKey && !error"
-            class="empty"
+            class="text-muted"
         >
             No vehicles loaded yet.
         </div>
 
-        <table
+        <div
             v-if="vehicles.length > 0"
-            class="vehicles-table"
+            class="table-responsive"
         >
-            <thead>
-                <tr>
-                    <th>Vehicle Serial</th>
-                    <th>Name</th>
-                    <th>Class</th>
-                    <th>Online</th>
-                    <th>Health</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr
-                    v-for="vehicle in vehicles"
-                    :key="vehicle.vehicle_serial"
-                >
-                    <td>{{ vehicle.vehicle_serial }}</td>
-                    <td>{{ vehicle.name }}</td>
-                    <td>{{ vehicle.vehicle_class ?? '—' }}</td>
-                    <td>{{ vehicle.is_online ? 'Yes' : 'No' }}</td>
-                    <td>{{ vehicle.device_health_status ?? '—' }}</td>
-                </tr>
-            </tbody>
-        </table>
+            <table class="table table-sm table-vcenter">
+                <thead>
+                    <tr>
+                        <th>Vehicle Serial</th>
+                        <th>Name</th>
+                        <th>Class</th>
+                        <th>Online</th>
+                        <th>Health</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr
+                        v-for="vehicle in vehicles"
+                        :key="vehicle.vehicle_serial"
+                    >
+                        <td>{{ vehicle.vehicle_serial }}</td>
+                        <td>{{ vehicle.name }}</td>
+                        <td>{{ vehicle.vehicle_class ?? '—' }}</td>
+                        <td>{{ vehicle.is_online ? 'Yes' : 'No' }}</td>
+                        <td>{{ vehicle.device_health_status ?? '—' }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { TablerLoading, TablerAlert } from '@tak-ps/vue-tabler';
 import { listVehicles } from '../api/client';
 import { ProxyError } from '../api/proxy';
 import type { SkydioVehicle } from '../types';
@@ -75,75 +89,23 @@ const emit = defineEmits<{
 }>();
 
 const loading = ref(false);
-const error = ref<string | null>(null);
+const error = ref<Error | undefined>();
 
 async function fetchVehicles(): Promise<void> {
     if (!props.apiKey) return;
 
     loading.value = true;
-    error.value = null;
+    error.value = undefined;
 
     try {
         const result = await listVehicles(props.apiKey);
         emit('update:vehicles', result);
     } catch (err) {
-        error.value = err instanceof ProxyError ? err.message : 'Failed to load vehicles';
+        error.value = err instanceof ProxyError || err instanceof Error
+            ? err
+            : new Error('Failed to load vehicles');
     } finally {
         loading.value = false;
     }
 }
 </script>
-
-<style scoped>
-.btn-primary {
-    padding: 6px 16px;
-    background: var(--tblr-primary, #206bc4);
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-bottom: 12px;
-}
-
-.btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.hint {
-    font-size: 12px;
-    color: var(--tblr-secondary, #6c757d);
-    margin: 0 0 12px;
-}
-
-.error {
-    color: var(--tblr-danger, #d63939);
-    font-size: 13px;
-    margin: 0 0 8px;
-}
-
-.empty {
-    font-size: 13px;
-    color: var(--tblr-secondary, #6c757d);
-    padding: 16px 0;
-}
-
-.vehicles-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    margin-top: 12px;
-}
-
-.vehicles-table th,
-.vehicles-table td {
-    padding: 6px 8px;
-    border: 1px solid var(--tblr-border-color, #dee2e6);
-    text-align: left;
-}
-
-.vehicles-table th {
-    background: var(--tblr-bg-surface-secondary, #f8f9fa);
-    font-weight: 600;
-}
-</style>

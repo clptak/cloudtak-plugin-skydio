@@ -1,9 +1,8 @@
 import type { App } from 'vue';
 import { defineAsyncComponent, h } from 'vue';
 import type { PluginAPI, PluginInstance } from '@tak-ps/cloudtak';
-import MenuTemplate from './components/MenuTemplate.vue';
 
-const SkydioPanel = defineAsyncComponent(() => import('./components/SkydioPanel.vue'));
+const MenuSkydio = defineAsyncComponent(() => import('./components/MenuSkydio.vue'));
 
 const SKYDIO_ROUTE_NAME = 'home-menu-plugin-skydio';
 const SKYDIO_MENU_KEY = 'skydio';
@@ -40,23 +39,19 @@ export default class SkydioPlugin implements PluginInstance {
     }
 
     static async install(
-        app: App,
+        _app: App,
         api: PluginAPI,
     ): Promise<PluginInstance> {
+        api.routes.add({
+            path: 'plugin-skydio',
+            name: SKYDIO_ROUTE_NAME,
+            component: MenuSkydio,
+        }, SKYDIO_ROUTE_PARENT);
+
         return new SkydioPlugin(api);
     }
 
     async enable(): Promise<void> {
-        this.api.routes.add({
-            path: 'plugin-skydio',
-            name: SKYDIO_ROUTE_NAME,
-            component: {
-                render: () => h(MenuTemplate, { name: 'Skydio' }, {
-                    default: () => h(SkydioPanel),
-                }),
-            },
-        }, SKYDIO_ROUTE_PARENT);
-
         this.api.menu.add({
             key: SKYDIO_MENU_KEY,
             label: 'Skydio',
@@ -69,6 +64,5 @@ export default class SkydioPlugin implements PluginInstance {
 
     async disable(): Promise<void> {
         this.api.menu.remove(SKYDIO_MENU_KEY);
-        this.api.router.removeRoute(SKYDIO_ROUTE_NAME);
     }
 }

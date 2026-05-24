@@ -1,16 +1,9 @@
 <template>
-    <div class="skydio-panel">
-        <nav class="skydio-tabs">
-            <button
-                v-for="tab in tabs"
-                :key="tab.id"
-                type="button"
-                :class="{ active: activeTab === tab.id }"
-                @click="activeTab = tab.id"
-            >
-                {{ tab.label }}
-            </button>
-        </nav>
+    <div class="col-12 py-3">
+        <TablerPillGroup
+            v-model="activeTab"
+            :options="tabs"
+        />
 
         <GetFlightsTab
             v-if="activeTab === 'flights'"
@@ -47,6 +40,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, watch } from 'vue';
+import { TablerPillGroup } from '@tak-ps/vue-tabler';
 import GetFlightsTab from './GetFlightsTab.vue';
 import MissionPlanningTab from './MissionPlanningTab.vue';
 import VehiclesTab from './VehiclesTab.vue';
@@ -58,17 +52,15 @@ import { AlertPoller } from '../alerts/polling';
 import type { SkydioAlert, SkydioSettings, SkydioVehicle } from '../types';
 
 const tabs = [
-    { id: 'flights', label: 'Get Flights' },
-    { id: 'missions', label: 'Mission Planning' },
-    { id: 'vehicles', label: 'Vehicles' },
-    { id: 'settings', label: 'Settings' },
-    { id: 'alerts', label: 'Alerts' },
-    { id: 'webhooks', label: 'Webhooks' },
-] as const;
+    { value: 'flights', label: 'Get Flights' },
+    { value: 'missions', label: 'Mission Planning' },
+    { value: 'vehicles', label: 'Vehicles' },
+    { value: 'settings', label: 'Settings' },
+    { value: 'alerts', label: 'Alerts' },
+    { value: 'webhooks', label: 'Webhooks' },
+];
 
-type TabId = typeof tabs[number]['id'];
-
-const activeTab = ref<TabId>('flights');
+const activeTab = ref('flights');
 const settings = reactive<SkydioSettings>(loadSettings());
 const vehicles = ref<SkydioVehicle[]>([]);
 const alerts = ref<SkydioAlert[]>([]);
@@ -100,8 +92,12 @@ function applyPolling(): void {
 }
 
 function onSaveSettings(next: SkydioSettings): void {
-    Object.assign(settings, next);
-    saveSettings(next);
+    const normalized = {
+        ...next,
+        apiKey: next.apiKey.trim(),
+    };
+    Object.assign(settings, normalized);
+    saveSettings(normalized);
     applyPolling();
 }
 
@@ -118,35 +114,3 @@ watch(
     () => applyPolling(),
 );
 </script>
-
-<style scoped>
-.skydio-panel {
-    padding: 12px;
-    font-size: 14px;
-    min-width: 360px;
-    max-width: 640px;
-}
-
-.skydio-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-bottom: 12px;
-    border-bottom: 1px solid var(--tblr-border-color, #dee2e6);
-}
-
-.skydio-tabs button {
-    background: none;
-    border: none;
-    padding: 8px 10px;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    color: inherit;
-    font-size: 13px;
-}
-
-.skydio-tabs button.active {
-    border-bottom-color: var(--tblr-primary, #206bc4);
-    font-weight: 600;
-}
-</style>

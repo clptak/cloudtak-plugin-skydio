@@ -11,19 +11,26 @@ import {
 function authHeaders(apiKey: string): Record<string, string> {
     return {
         accept: 'application/json',
-        Authorization: apiKey,
+        Authorization: apiKey.trim(),
     };
 }
 
 function assertOk<T>(response: { status: number; body: SkydioApiResponse<T> }): SkydioApiResponse<T> {
     const { body, status } = response;
-    if (status !== 200 || body.status_code !== 200 || body.skydio_error_code !== 0) {
+
+    if (typeof body !== 'object' || body === null) {
+        throw new ProxyError(`Unexpected Skydio proxy response (${status})`, status);
+    }
+
+    const skydioBody = body as SkydioApiResponse<T> & { error_message?: string | null };
+    if (status !== 200 || skydioBody.status_code !== 200 || skydioBody.skydio_error_code !== 0) {
         throw new ProxyError(
-            body.error_message ?? `Skydio API error (${body.status_code})`,
+            skydioBody.error_message ?? `Skydio API error (HTTP ${status}, code ${skydioBody.status_code})`,
             status,
         );
     }
-    return body;
+
+    return skydioBody;
 }
 
 export async function listVehicles(apiKey: string): Promise<SkydioVehicle[]> {
@@ -35,7 +42,7 @@ export async function listVehicles(apiKey: string): Promise<SkydioVehicle[]> {
     return assertOk(res).data.vehicles ?? [];
 }
 
-export async function listFlights(
+async function listFlightsForSerials(
     apiKey: string,
     opts: { takeoffSince: string; takeoffBefore?: string; vehicleSerials?: string[] },
 ): Promise<SkydioFlight[]> {
@@ -57,6 +64,35 @@ export async function listFlights(
         headers: authHeaders(apiKey),
     });
     return assertOk(res).data.flights ?? [];
+}
+
+export async function listFlights(
+    apiKey: string,
+    opts: { takeoffSince: string; takeoffBefore?: string; vehicleSerials?: string[] },
+): Promise<SkydioFlight[]> {
+    const serials = opts.vehicleSerials ?? [];
+    if (serials.length <= 1) {
+        return listFlightsForSerials(apiKey, opts);
+    }
+
+    const batches = await Promise.all(
+        serials.map((serial) => listFlightsForSerials(apiKey, {
+            ...opts,
+            vehicleSerials: [serial],
+        })),
+    );
+
+    const seen = new Set<string>();
+    const merged: SkydioFlight[] = [];
+    for (const batch of batches) {
+        for (const flight of batch) {
+            if (seen.has(flight.flight_id)) continue;
+            seen.add(flight.flight_id);
+            merged.push(flight);
+        }
+    }
+
+    return merged.sort((a, b) => String(b.takeoff ?? '').localeCompare(String(a.takeoff ?? '')));
 }
 
 export async function getFlightTelemetry(
@@ -92,7 +128,7 @@ export async function createWebhook(
             ...authHeaders(apiKey),
             'content-type': 'application/json',
         },
-        body: { name, url },
+        body: { name: name.trim(), url: url.trim() },
     });
     return assertOk(res).data.webhook;
 }

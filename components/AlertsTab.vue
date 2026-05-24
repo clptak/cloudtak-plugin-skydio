@@ -1,37 +1,35 @@
 <template>
-    <div class="skydio-tab">
-        <section class="polling-settings">
-            <h4>Polling Settings</h4>
-
-            <label class="field">
-                <span>Poll interval (seconds)</span>
-                <input
+    <div class="col-12 py-3">
+        <div class="card mb-3">
+            <div class="card-header">
+                <div class="card-title">
+                    Polling Settings
+                </div>
+            </div>
+            <div class="card-body">
+                <TablerInput
                     v-model.number="intervalSeconds"
+                    label="Poll interval (seconds)"
                     type="number"
-                    min="15"
-                    max="300"
+                    :description="'Polling uses the Skydio API via Plugin Proxy. Requires https://api.skydio.com whitelisted.'"
                     @change="savePolling"
-                >
-            </label>
+                />
 
-            <label class="field checkbox">
-                <input
-                    v-model="local.pollingEnabled"
-                    type="checkbox"
-                    @change="savePolling"
-                >
-                <span>Enable polling-based alerts</span>
-            </label>
+                <label class="form-check mt-3">
+                    <input
+                        v-model="local.pollingEnabled"
+                        class="form-check-input"
+                        type="checkbox"
+                        @change="savePolling"
+                    >
+                    <span class="form-check-label">Enable polling-based alerts</span>
+                </label>
+            </div>
+        </div>
 
-            <p class="hint">
-                Polling is the primary alert path for Docker Compose and AWS.
-                Requires Plugin Proxy enabled with <code>https://api.skydio.com</code> whitelisted.
-            </p>
-        </section>
-
-        <div class="status-bar">
+        <div class="d-flex align-items-center mb-3">
             <span
-                class="status-dot"
+                class="status-dot me-2"
                 :class="{ active: status.polling }"
             />
             <span v-if="status.polling">
@@ -43,52 +41,46 @@
             <span v-else>Polling stopped</span>
         </div>
 
-        <p
+        <TablerAlert
             v-if="error"
-            class="error"
-        >
-            {{ error }}
-        </p>
+            :err="proxyError"
+        />
 
-        <p
+        <div
             v-if="!apiKeyConfigured"
-            class="hint"
+            class="alert alert-warning"
         >
             Configure your API key in Settings to start polling.
-        </p>
-
-        <p class="hint">
-            Detects vehicle online/offline, flight start/end, telemetry available,
-            and live stream changes by polling Skydio APIs. Replaces inbound webhooks
-            for Docker Compose and AWS map clients.
-        </p>
+        </div>
 
         <div
             v-if="alerts.length === 0 && apiKeyConfigured"
-            class="empty"
+            class="text-muted"
         >
             No alerts yet. Waiting for state changes…
         </div>
 
-        <ul
-            v-else
-            class="alert-list"
-        >
-            <li
+        <template v-else-if="alerts.length > 0">
+            <div
                 v-for="alert in alerts"
                 :key="alert.id"
-                class="alert-item"
+                class="border-bottom py-2"
             >
-                <span class="alert-type">{{ formatType(alert.type) }}</span>
-                <span class="alert-message">{{ alert.message }}</span>
-                <span class="alert-time">{{ formatTime(alert.timestamp) }}</span>
-            </li>
-        </ul>
+                <div class="fw-bold text-capitalize">
+                    {{ formatType(alert.type) }}
+                </div>
+                <div>{{ alert.message }}</div>
+                <div class="small text-muted">
+                    {{ formatTime(alert.timestamp) }}
+                </div>
+            </div>
+        </template>
     </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
+import { TablerInput, TablerAlert } from '@tak-ps/vue-tabler';
 import type { SkydioAlert, SkydioSettings } from '../types';
 
 const props = defineProps<{
@@ -107,6 +99,10 @@ const local = reactive({
     pollingEnabled: props.settings.pollingEnabled,
 });
 const intervalSeconds = ref(Math.round(props.settings.pollIntervalMs / 1000));
+
+const proxyError = computed(() => (
+    props.error ? new Error(props.error) : undefined
+));
 
 watch(
     () => props.settings,
@@ -139,99 +135,15 @@ function formatTime(iso: string): string {
 </script>
 
 <style scoped>
-.polling-settings {
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--tblr-border-color, #dee2e6);
-}
-
-.polling-settings h4 {
-    margin: 0 0 12px;
-}
-
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 12px;
-}
-
-.field.checkbox {
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-}
-
-.field input[type="number"] {
-    padding: 6px 8px;
-    border: 1px solid var(--tblr-border-color, #dee2e6);
-    border-radius: 4px;
-    background: var(--tblr-bg-surface, #fff);
-    color: inherit;
-    max-width: 120px;
-}
-
-.status-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-    font-size: 13px;
-}
-
 .status-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background: var(--tblr-secondary, #6c757d);
+    display: inline-block;
 }
 
 .status-dot.active {
     background: var(--tblr-success, #2fb344);
-}
-
-.error {
-    color: var(--tblr-danger, #d63939);
-    font-size: 13px;
-    margin: 0 0 8px;
-}
-
-.hint {
-    font-size: 12px;
-    color: var(--tblr-secondary, #6c757d);
-    margin: 0 0 12px;
-}
-
-.empty {
-    font-size: 13px;
-    color: var(--tblr-secondary, #6c757d);
-    padding: 16px 0;
-}
-
-.alert-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    max-height: 320px;
-    overflow-y: auto;
-}
-
-.alert-item {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--tblr-border-color, #dee2e6);
-    font-size: 13px;
-}
-
-.alert-type {
-    font-weight: 600;
-    text-transform: capitalize;
-}
-
-.alert-time {
-    font-size: 11px;
-    color: var(--tblr-secondary, #6c757d);
 }
 </style>

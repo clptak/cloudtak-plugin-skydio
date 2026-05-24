@@ -1,108 +1,129 @@
 <template>
-    <div class="skydio-tab">
-        <p class="notice">
-            Inbound Skydio webhooks cannot reach this browser plugin.
-            Use this tab to register webhooks pointing at a public receiver
-            (CloudTAK ETL layer on AWS or external middleware).
-            <a
-                href="https://support.skydio.com/hc/en-us/articles/19299707787035-How-to-configure-alerts-in-Skydio-Cloud"
-                target="_blank"
-                rel="noopener"
-            >Configure Skydio Alerts</a>
-        </p>
+    <div class="col-12 py-3">
+        <div class="card mb-3">
+            <div class="card-body">
+                <p class="text-muted mb-0">
+                    Vehicles, flights, and telemetry use the Skydio Cloud API directly via
+                    CloudTAK Plugin Proxy. No ETL layer is required for those features.
+                    Webhook registration also calls Skydio directly; inbound delivery still
+                    needs a public HTTPS endpoint (optional ETL layer on AWS).
+                </p>
+            </div>
+        </div>
 
         <div
             v-if="!apiKey"
-            class="hint"
+            class="alert alert-warning"
         >
             Configure your API key in Settings first.
         </div>
 
         <template v-else>
-            <section class="create-form">
-                <h4>Create Webhook</h4>
-                <label class="field">
-                    <span>Name</span>
-                    <input
-                        v-model="form.name"
-                        type="text"
-                        maxlength="128"
-                        placeholder="CloudTAK ETL"
-                    >
-                </label>
-                <label class="field">
-                    <span>URL</span>
-                    <input
-                        v-model="form.url"
-                        type="url"
-                        maxlength="512"
-                        placeholder="https://webhooks.example.com/{layer-uuid}"
-                    >
-                </label>
-                <button
-                    type="button"
-                    class="btn-primary"
-                    :disabled="loading || !form.name || !form.url"
-                    @click="create"
-                >
-                    Create
-                </button>
-            </section>
-
-            <section class="webhook-list">
-                <div class="list-header">
-                    <h4>Registered Webhooks</h4>
-                    <button
-                        type="button"
-                        class="btn-secondary"
-                        :disabled="loading"
-                        @click="refresh"
-                    >
-                        Refresh
-                    </button>
+            <div class="card mb-3">
+                <div class="card-header">
+                    <div class="card-title">
+                        Create Webhook
+                    </div>
                 </div>
+                <div class="card-body">
+                    <TablerInput
+                        v-model="form.name"
+                        label="Name"
+                        placeholder="CloudTAK ETL"
+                        :description="'Display name in Skydio Cloud (max 128 characters)'"
+                    />
+                    <TablerInput
+                        v-model="form.url"
+                        class="mt-3"
+                        label="URL"
+                        placeholder="https://webhooks.example.com/your-layer-uuid"
+                        :description="'Public HTTPS endpoint Skydio will POST events to. Optional unless you want inbound alerts via ETL.'"
+                    />
 
-                <p
-                    v-if="error"
-                    class="error"
-                >
-                    {{ error }}
-                </p>
+                    <div class="d-flex align-items-center mt-3">
+                        <button
+                            type="button"
+                            class="btn btn-primary"
+                            :disabled="loading || !canCreate"
+                            @click="create"
+                        >
+                            Create Webhook
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-                <table v-if="webhooks.length">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>URL</th>
-                            <th>ID</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
+            <TablerLoading
+                v-if="loading"
+                :compact="true"
+                desc="Contacting Skydio API…"
+            />
+
+            <TablerAlert
+                v-if="error"
+                class="mt-3"
+                :err="error"
+            />
+
+            <div
+                v-if="success"
+                class="alert alert-success mt-3"
+            >
+                {{ success }}
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <div class="card-title">
+                        Registered Webhooks
+                    </div>
+                    <div class="card-actions">
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-secondary"
+                            :disabled="loading"
+                            @click="refresh"
+                        >
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div
+                        v-if="webhooks.length === 0 && !loading"
+                        class="text-muted"
+                    >
+                        No webhooks registered.
+                    </div>
+
+                    <template v-else>
+                        <div
                             v-for="wh in webhooks"
                             :key="wh.id"
+                            class="border-bottom py-2"
                         >
-                            <td>{{ wh.name }}</td>
-                            <td class="url">{{ wh.url }}</td>
-                            <td class="id">{{ wh.id }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <p
-                    v-else-if="!loading"
-                    class="empty"
-                >
-                    No webhooks registered.
-                </p>
-            </section>
+                            <div class="fw-bold">
+                                {{ wh.name }}
+                            </div>
+                            <div class="small text-muted text-break">
+                                {{ wh.url }}
+                            </div>
+                            <div class="small font-monospace text-muted">
+                                {{ wh.id }}
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
         </template>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue';
+import { computed, ref, reactive, watch, onMounted } from 'vue';
+import { TablerInput, TablerLoading, TablerAlert } from '@tak-ps/vue-tabler';
 import { createWebhook, listWebhooks } from '../api/client';
+import { ProxyError } from '../api/proxy';
 import type { SkydioWebhook } from '../types';
 
 const props = defineProps<{
@@ -111,33 +132,50 @@ const props = defineProps<{
 
 const webhooks = ref<SkydioWebhook[]>([]);
 const loading = ref(false);
-const error = ref<string | null>(null);
+const error = ref<Error | undefined>();
+const success = ref<string | null>(null);
 const form = reactive({ name: '', url: '' });
+
+const canCreate = computed(() => Boolean(form.name.trim() && form.url.trim()));
+
+function toError(err: unknown, fallback: string): Error {
+    if (err instanceof ProxyError || err instanceof Error) {
+        return err;
+    }
+    return new Error(fallback);
+}
 
 async function refresh(): Promise<void> {
     if (!props.apiKey) return;
+
     loading.value = true;
-    error.value = null;
+    error.value = undefined;
+    success.value = null;
+
     try {
         webhooks.value = await listWebhooks(props.apiKey);
     } catch (err) {
-        error.value = err instanceof Error ? err.message : 'Failed to load webhooks';
+        error.value = toError(err, 'Failed to load webhooks');
     } finally {
         loading.value = false;
     }
 }
 
 async function create(): Promise<void> {
-    if (!props.apiKey || !form.name || !form.url) return;
+    if (!props.apiKey || !canCreate.value) return;
+
     loading.value = true;
-    error.value = null;
+    error.value = undefined;
+    success.value = null;
+
     try {
         const created = await createWebhook(props.apiKey, form.name, form.url);
-        webhooks.value = [created, ...webhooks.value.filter(w => w.id !== created.id)];
+        webhooks.value = [created, ...webhooks.value.filter((w) => w.id !== created.id)];
+        success.value = `${created.name} registered in Skydio Cloud.`;
         form.name = '';
         form.url = '';
     } catch (err) {
-        error.value = err instanceof Error ? err.message : 'Failed to create webhook';
+        error.value = toError(err, 'Failed to create webhook');
     } finally {
         loading.value = false;
     }
@@ -147,97 +185,3 @@ watch(() => props.apiKey, () => void refresh());
 
 onMounted(() => void refresh());
 </script>
-
-<style scoped>
-.notice {
-    font-size: 12px;
-    background: var(--tblr-bg-surface-secondary, #f8f9fa);
-    padding: 8px;
-    border-radius: 4px;
-    margin: 0 0 12px;
-}
-
-.create-form,
-.webhook-list {
-    margin-bottom: 16px;
-}
-
-.create-form h4,
-.list-header h4 {
-    margin: 0 0 8px;
-    font-size: 14px;
-}
-
-.list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 8px;
-}
-
-.field input {
-    padding: 6px 8px;
-    border: 1px solid var(--tblr-border-color, #dee2e6);
-    border-radius: 4px;
-    background: var(--tblr-bg-surface, #fff);
-    color: inherit;
-}
-
-.btn-primary,
-.btn-secondary {
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    border: 1px solid var(--tblr-border-color, #dee2e6);
-    background: var(--tblr-bg-surface, #fff);
-    color: inherit;
-}
-
-.btn-primary {
-    background: var(--tblr-primary, #206bc4);
-    color: #fff;
-    border-color: transparent;
-}
-
-.btn-primary:disabled,
-.btn-secondary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-}
-
-th, td {
-    text-align: left;
-    padding: 6px 4px;
-    border-bottom: 1px solid var(--tblr-border-color, #dee2e6);
-    vertical-align: top;
-}
-
-.url, .id {
-    word-break: break-all;
-    font-family: monospace;
-    font-size: 11px;
-}
-
-.error {
-    color: var(--tblr-danger, #d63939);
-    font-size: 13px;
-}
-
-.hint, .empty {
-    font-size: 13px;
-    color: var(--tblr-secondary, #6c757d);
-}
-</style>

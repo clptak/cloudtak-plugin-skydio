@@ -6,6 +6,11 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "peerDependencies": {
+    "@tak-ps/cloudtak": "*",
+    "@tak-ps/vue-tabler": "*",
+    "vue": "^3.5.0"
+  },
   "devDependencies": {
     "@tak-ps/cloudtak": "*",
     "typescript": "^5.0.0",

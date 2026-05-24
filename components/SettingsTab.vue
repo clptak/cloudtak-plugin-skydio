@@ -1,29 +1,45 @@
 <template>
-    <div class="skydio-tab">
-        <h4>Skydio API Settings</h4>
+    <div class="col-12 py-3">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    Skydio API Settings
+                </div>
+            </div>
+            <div class="card-body">
+                <TablerInput
+                    v-model="local.apiKey"
+                    label="API Key"
+                    type="password"
+                    placeholder="Skydio Cloud API token"
+                    description="Used for vehicles, flights, telemetry, webhooks, and polling. Requires CloudTAK Plugin Proxy with https://api.skydio.com whitelisted."
+                />
 
-        <label class="field">
-            <span>API Key</span>
-            <input
-                v-model="local.apiKey"
-                type="password"
-                placeholder="Skydio Cloud API token"
-                autocomplete="off"
-            >
-        </label>
+                <div class="d-flex align-items-center mt-3">
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        :disabled="!local.apiKey.trim()"
+                        @click="save"
+                    >
+                        Submit
+                    </button>
+                </div>
+            </div>
+        </div>
 
-        <button
-            type="button"
-            class="btn-primary"
-            @click="save"
+        <div
+            v-if="saved"
+            class="alert alert-success mt-3"
         >
-            Submit
-        </button>
+            Settings saved. Your Skydio API key is stored in this browser.
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
+import { TablerInput } from '@tak-ps/vue-tabler';
 import type { SkydioSettings } from '../types';
 
 const props = defineProps<{
@@ -35,6 +51,7 @@ const emit = defineEmits<{
 }>();
 
 const local = reactive<SkydioSettings>({ ...props.settings });
+const saved = ref(false);
 
 watch(
     () => props.settings,
@@ -45,36 +62,10 @@ watch(
 );
 
 function save(): void {
-    emit('save', { ...local });
+    emit('save', {
+        ...local,
+        apiKey: local.apiKey.trim(),
+    });
+    saved.value = true;
 }
 </script>
-
-<style scoped>
-.skydio-tab h4 {
-    margin: 0 0 12px;
-}
-
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 12px;
-}
-
-.field input[type="password"] {
-    padding: 6px 8px;
-    border: 1px solid var(--tblr-border-color, #dee2e6);
-    border-radius: 4px;
-    background: var(--tblr-bg-surface, #fff);
-    color: inherit;
-}
-
-.btn-primary {
-    padding: 6px 16px;
-    background: var(--tblr-primary, #206bc4);
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-</style>
