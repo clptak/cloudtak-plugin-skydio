@@ -15,7 +15,10 @@
             v-else-if="activeTab === 'vehicles'"
             :api-key="settings.apiKey"
             :vehicles="vehicles"
-            @update:vehicles="vehicles = $event"
+            :loading="vehiclesLoading"
+            :cached="vehiclesCached"
+            :error="vehiclesError"
+            @refresh="refreshVehicles"
         />
         <SettingsTab
             v-else-if="activeTab === 'settings'"
@@ -47,7 +50,10 @@ import VehiclesTab from './VehiclesTab.vue';
 import SettingsTab from './SettingsTab.vue';
 import AlertsTab from './AlertsTab.vue';
 import WebhooksTab from './WebhooksTab.vue';
+import { listVehicles } from '../api/client';
+import { ProxyError } from '../api/proxy';
 import { loadSettings, saveSettings } from '../storage/settings';
+import { loadVehicles, saveVehicles } from '../storage/vehicles';
 import { getCurrentUserId } from '../storage/user';
 import { AlertPoller } from '../alerts/polling';
 import type { SkydioAlert, SkydioSettings, SkydioVehicle } from '../types';
@@ -64,7 +70,10 @@ const tabs = [
 const activeTab = ref('flights');
 const currentUserId = ref(getCurrentUserId());
 const settings = reactive<SkydioSettings>(loadSettings());
-const vehicles = ref<SkydioVehicle[]>([]);
+const vehicles = ref<SkydioVehicle[]>(loadVehicles());
+const vehiclesLoading = ref(false);
+const vehiclesCached = ref(vehicles.value.length > 0);
+const vehiclesError = ref<Error | undefined>();
 const alerts = ref<SkydioAlert[]>([]);
 const pollError = ref<string | null>(null);
 const pollStatus = ref<{ lastPoll: string | null; polling: boolean }>({
@@ -93,6 +102,29 @@ function applyPolling(): void {
     }
 }
 
+function setVehicles(next: SkydioVehicle[]): void {
+    vehicles.value = next;
+    saveVehicles(next);
+    vehiclesCached.value = next.length > 0;
+}
+
+async function refreshVehicles(): Promise<void> {
+    if (!settings.apiKey || vehiclesLoading.value) return;
+
+    vehiclesLoading.value = true;
+    vehiclesError.value = undefined;
+
+    try {
+        setVehicles(await listVehicles(settings.apiKey));
+    } catch (err) {
+        vehiclesError.value = err instanceof ProxyError || err instanceof Error
+            ? err
+            : new Error('Failed to load vehicles');
+    } finally {
+        vehiclesLoading.value = false;
+    }
+}
+
 function onSaveSettings(next: SkydioSettings): void {
     const normalized = {
         ...next,
@@ -101,6 +133,7 @@ function onSaveSettings(next: SkydioSettings): void {
     Object.assign(settings, normalized);
     saveSettings(normalized);
     applyPolling();
+    void refreshVehicles();
 }
 
 function reloadForUser(): void {
@@ -109,10 +142,13 @@ function reloadForUser(): void {
 
     currentUserId.value = userId;
     Object.assign(settings, loadSettings());
-    vehicles.value = [];
+    vehicles.value = loadVehicles();
+    vehiclesCached.value = vehicles.value.length > 0;
+    vehiclesError.value = undefined;
     alerts.value = [];
     pollError.value = null;
     applyPolling();
+    void refreshVehicles();
 }
 
 let userCheckTimer: ReturnType<typeof setInterval> | undefined;
@@ -120,6 +156,7 @@ let userCheckTimer: ReturnType<typeof setInterval> | undefined;
 onMounted(() => {
     reloadForUser();
     applyPolling();
+    void refreshVehicles();
     window.addEventListener('focus', reloadForUser);
     window.addEventListener('storage', reloadForUser);
     userCheckTimer = setInterval(reloadForUser, 3000);

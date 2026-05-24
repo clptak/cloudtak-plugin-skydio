@@ -9,9 +9,9 @@
                     type="button"
                     class="btn btn-primary"
                     :disabled="loading || !apiKey"
-                    @click="fetchVehicles"
+                    @click="emit('refresh')"
                 >
-                    Get Vehicles
+                    Refresh Vehicles
                 </button>
             </div>
         </div>
@@ -23,8 +23,15 @@
             Configure your API key in Settings first.
         </div>
 
+        <p
+            v-if="cached && vehicles.length > 0 && loading"
+            class="text-muted small"
+        >
+            Showing cached vehicles while refreshing from Skydio…
+        </p>
+
         <TablerLoading
-            v-if="loading"
+            v-if="loading && vehicles.length === 0"
             :compact="true"
             desc="Loading vehicles from Skydio…"
         />
@@ -73,39 +80,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
 import { TablerLoading, TablerAlert } from '@tak-ps/vue-tabler';
-import { listVehicles } from '../api/client';
-import { ProxyError } from '../api/proxy';
 import type { SkydioVehicle } from '../types';
 
-const props = defineProps<{
+defineProps<{
     apiKey: string;
     vehicles: SkydioVehicle[];
+    loading: boolean;
+    cached: boolean;
+    error?: Error;
 }>();
 
 const emit = defineEmits<{
-    'update:vehicles': [vehicles: SkydioVehicle[]];
+    refresh: [];
 }>();
-
-const loading = ref(false);
-const error = ref<Error | undefined>();
-
-async function fetchVehicles(): Promise<void> {
-    if (!props.apiKey) return;
-
-    loading.value = true;
-    error.value = undefined;
-
-    try {
-        const result = await listVehicles(props.apiKey);
-        emit('update:vehicles', result);
-    } catch (err) {
-        error.value = err instanceof ProxyError || err instanceof Error
-            ? err
-            : new Error('Failed to load vehicles');
-    } finally {
-        loading.value = false;
-    }
-}
 </script>
