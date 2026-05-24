@@ -64,7 +64,14 @@ export async function proxyRequest<T = unknown>(opts: {
 
     if (!res.ok) {
         const body = payload as { message?: string };
-        const message = body.message ?? `Proxy request failed (${res.status})`;
+        let message = body.message ?? `Proxy request failed (${res.status})`;
+        if (/1\s*MB limit/i.test(message)) {
+            message = [
+                'CloudTAK Plugin Proxy limits responses to 1MB (server-side, not this plugin).',
+                'Full-flight Skydio telemetry often exceeds that limit.',
+                'Try one shorter flight at a time, or fetch telemetry outside CloudTAK.',
+            ].join(' ');
+        }
         throw new ProxyError(proxyHint(res.status, message), res.status);
     }
 

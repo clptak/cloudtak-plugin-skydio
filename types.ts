@@ -84,4 +84,5 @@ export const DEFAULT_SETTINGS: SkydioSettings = {
 };
 
 export const SKYDIO_API_BASE = 'https://api.skydio.com/api';
+/** @deprecated Use per-user keys via storage/settings.ts */
 export const SETTINGS_KEY = 'cloudtak-plugin-skydio:settings';

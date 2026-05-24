@@ -116,6 +116,12 @@
                     </button>
                 </div>
 
+                <p class="form-hint mt-2">
+                    Downloads one GeoJSON file per selected flight. CloudTAK's Plugin Proxy
+                    rejects Skydio responses over 1MB, so long flights may fail — try one
+                    flight at a time.
+                </p>
+
                 <TablerLoading
                     v-if="downloading"
                     class="mt-3"
@@ -143,7 +149,6 @@ import {
     downloadGeoJson,
     flightLabel,
     telemetryToGeoJson,
-    type GeoJsonFeatureCollection,
 } from '../utils/telemetryGeoJson';
 
 const props = defineProps<{
@@ -195,28 +200,43 @@ async function searchFlights(): Promise<void> {
     }
 }
 
+function sanitizeFilename(label: string): string {
+    return label.replace(/[^\w.-]+/g, '_').slice(0, 80) || 'flight';
+}
+
 async function downloadTelemetry(): Promise<void> {
     if (!props.apiKey || selectedFlightIds.value.length === 0) return;
 
     downloading.value = true;
     downloadError.value = undefined;
 
-    try {
-        const collections: GeoJsonFeatureCollection[] = [];
+    const failures: string[] = [];
+    let successCount = 0;
 
+    try {
         for (const flightId of selectedFlightIds.value) {
-            const telemetry = await getFlightTelemetry(props.apiKey, flightId);
-            collections.push(telemetryToGeoJson(telemetry));
+            const flight = flights.value.find((item) => item.flight_id === flightId);
+            const label = flight
+                ? flightLabel(flight.vehicle_serial, flight.takeoff)
+                : flightId;
+
+            try {
+                const telemetry = await getFlightTelemetry(props.apiKey, flightId);
+                const collection = telemetryToGeoJson(telemetry);
+                downloadGeoJson(collection, `skydio-telemetry-${sanitizeFilename(label)}.geojson`);
+                successCount += 1;
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'Unknown error';
+                failures.push(`${label}: ${message}`);
+            }
         }
 
-        const combined: GeoJsonFeatureCollection = {
-            type: 'FeatureCollection',
-            features: collections.flatMap((c) => c.features),
-        };
-
-        downloadGeoJson(combined, 'skydio-telemetry.geojson');
-    } catch (err) {
-        downloadError.value = toError(err, 'Failed to download telemetry');
+        if (failures.length > 0) {
+            const summary = successCount > 0
+                ? `Downloaded ${successCount} flight(s). ${failures.length} failed:\n`
+                : 'Telemetry download failed:\n';
+            downloadError.value = new Error(summary + failures.join('\n'));
+        }
     } finally {
         downloading.value = false;
     }

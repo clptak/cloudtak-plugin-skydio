@@ -48,6 +48,7 @@ import SettingsTab from './SettingsTab.vue';
 import AlertsTab from './AlertsTab.vue';
 import WebhooksTab from './WebhooksTab.vue';
 import { loadSettings, saveSettings } from '../storage/settings';
+import { getCurrentUserId } from '../storage/user';
 import { AlertPoller } from '../alerts/polling';
 import type { SkydioAlert, SkydioSettings, SkydioVehicle } from '../types';
 
@@ -61,6 +62,7 @@ const tabs = [
 ];
 
 const activeTab = ref('flights');
+const currentUserId = ref(getCurrentUserId());
 const settings = reactive<SkydioSettings>(loadSettings());
 const vehicles = ref<SkydioVehicle[]>([]);
 const alerts = ref<SkydioAlert[]>([]);
@@ -101,12 +103,33 @@ function onSaveSettings(next: SkydioSettings): void {
     applyPolling();
 }
 
-onMounted(() => {
+function reloadForUser(): void {
+    const userId = getCurrentUserId();
+    if (userId === currentUserId.value) return;
+
+    currentUserId.value = userId;
+    Object.assign(settings, loadSettings());
+    vehicles.value = [];
+    alerts.value = [];
+    pollError.value = null;
     applyPolling();
+}
+
+let userCheckTimer: ReturnType<typeof setInterval> | undefined;
+
+onMounted(() => {
+    reloadForUser();
+    applyPolling();
+    window.addEventListener('focus', reloadForUser);
+    window.addEventListener('storage', reloadForUser);
+    userCheckTimer = setInterval(reloadForUser, 3000);
 });
 
 onUnmounted(() => {
     poller.stop();
+    window.removeEventListener('focus', reloadForUser);
+    window.removeEventListener('storage', reloadForUser);
+    if (userCheckTimer) clearInterval(userCheckTimer);
 });
 
 watch(

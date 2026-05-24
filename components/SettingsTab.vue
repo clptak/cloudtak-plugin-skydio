@@ -12,7 +12,7 @@
                     label="API Key"
                     type="password"
                     placeholder="Skydio Cloud API token"
-                    description="Used for vehicles, flights, telemetry, webhooks, and polling. Requires CloudTAK Plugin Proxy with https://api.skydio.com whitelisted."
+                    description="Used for vehicles, flights, telemetry, webhooks, and polling. Stored per CloudTAK user in this browser. Requires Plugin Proxy with https://api.skydio.com whitelisted."
                 />
 
                 <div class="d-flex align-items-center mt-3">
@@ -32,7 +32,7 @@
             v-if="saved"
             class="alert alert-success mt-3"
         >
-            Settings saved. Your Skydio API key is stored in this browser.
+            Settings saved. Your Skydio API key is stored for this CloudTAK user in this browser.
         </div>
     </div>
 </template>
