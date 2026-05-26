@@ -1,4 +1,5 @@
 import { fetchClientCredentialsToken } from '../api/authentik';
+import { resolveSkydioSseUrl } from '../lib/sse-url';
 import { handleSkydioSseEvent } from './webhook';
 import type { SkydioAlert, SkydioSettings, SkydioWebhookAlert, SkydioWebhookSseEvent } from '../types';
 import type { AlertListener } from './polling';
@@ -163,7 +164,7 @@ export class SkydioSseClient {
         const controller = new AbortController();
         this.abortController = controller;
 
-        const res = await fetch(settings.skydioSseUrl.trim(), {
+        const res = await fetch(resolveSkydioSseUrl(settings.skydioSseUrl), {
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${token.access_token}`,

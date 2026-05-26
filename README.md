@@ -16,7 +16,28 @@ Copy or symlink this repository into CloudTAK's `api/web/plugins/skydio/` before
 3. Skydio Cloud API token entered in the plugin Settings tab.
 4. Authentik **webhook-sse** OAuth2 client ID + secret for real-time alerts (Settings → Webhook SSE).
 5. Skydio webhook registered to `https://webhook.ccsosar.net/api/skydio` (Webhooks tab).
-6. **CORS** on [clptak-webhook-server](https://github.com/clptak/clptak-webhook-server) allowing the CloudTAK origin on `/events/*`.
+6. **CORS** on webhook server `/events/*` for your CloudTAK origin (production: `https://cloudtak.ccsosar.net`; local dev: `http://localhost:8080`). Deploy `WebMvcConfig.kt` in clptak-webhook-server and reload the tak-stack Caddyfile.
+
+### Local dev (localhost:8080)
+
+SSE cannot use the Plugin Proxy (long-lived stream). From local CloudTAK dev, either:
+
+1. **Deploy server CORS** (recommended): rebuild `webhook-server` with `WebMvcConfig.kt` and reload Caddy (see tak-stack `Caddyfile` `/events/*` block), or
+2. **Vite dev proxy** (no server change): add to CloudTAK `api/web/vite.config.ts`:
+
+```typescript
+server: {
+  proxy: {
+    '/webhook-sse': {
+      target: 'https://webhook.ccsosar.net',
+      changeOrigin: true,
+      rewrite: (path) => path.replace(/^\/webhook-sse/, ''),
+    },
+  },
+},
+```
+
+The plugin automatically uses `http://localhost:8080/webhook-sse/events/skydio` when running on localhost.
 
 ## Alerts and webhooks
 
