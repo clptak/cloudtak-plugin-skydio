@@ -52,11 +52,12 @@ function parseSseFrame(frame: string, onEvent: (eventType: string, data: string)
     const dataLines: string[] = [];
 
     for (const line of frame.split('\n')) {
-        if (!line || line.startsWith(':')) continue;
-        if (line.startsWith('event:')) {
-            eventType = line.slice(6).trim();
-        } else if (line.startsWith('data:')) {
-            dataLines.push(line.slice(5).trimStart());
+        const trimmedLine = line.replace(/\r$/, '');
+        if (!trimmedLine || trimmedLine.startsWith(':')) continue;
+        if (trimmedLine.startsWith('event:')) {
+            eventType = trimmedLine.slice(6).trim();
+        } else if (trimmedLine.startsWith('data:')) {
+            dataLines.push(trimmedLine.slice(5).trimStart());
         }
     }
 
@@ -79,7 +80,7 @@ async function readSseStream(
             const { done, value } = await reader.read();
             if (done) break;
 
-            buffer += decoder.decode(value, { stream: true });
+            buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
 
             let separatorIndex = buffer.indexOf('\n\n');
             while (separatorIndex !== -1) {
@@ -194,11 +195,14 @@ export class SkydioSseClient {
         data: string,
         settings: SkydioSettings,
     ): Promise<void> {
+        const trimmed = data.trim();
+        if (!trimmed.startsWith('{')) return;
+
         let event: SkydioWebhookSseEvent;
         try {
-            event = JSON.parse(data) as SkydioWebhookSseEvent;
+            event = JSON.parse(trimmed) as SkydioWebhookSseEvent;
         } catch {
-            this.onError('Received invalid SSE JSON payload');
+            this.onError(`Received invalid SSE JSON payload: ${trimmed.slice(0, 120)}`);
             return;
         }
 
