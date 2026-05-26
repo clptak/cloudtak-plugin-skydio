@@ -9,30 +9,42 @@ Copy or symlink this repository into CloudTAK's `api/web/plugins/skydio/` before
 ## Prerequisites
 
 1. **Plugin Proxy** enabled in CloudTAK Admin → Plugin Proxy.
-2. Whitelist `https://api.skydio.com`.
+2. Whitelist these hosts:
+   - `https://api.skydio.com` — Skydio Cloud API (vehicles, flights, webhooks)
+   - `https://users.ccsosar.net` — Authentik token endpoint (OAuth client_credentials)
+   - `https://webhook.ccsosar.net` — webhook server SSE stream
 3. Skydio Cloud API token entered in the plugin Settings tab.
+4. Authentik **webhook-sse** OAuth2 client ID + secret for real-time alerts (Settings → Webhook SSE).
+5. Skydio webhook registered to `https://webhook.ccsosar.net/api/skydio` (Webhooks tab).
+6. **CORS** on [clptak-webhook-server](https://github.com/clptak/clptak-webhook-server) allowing the CloudTAK origin on `/events/*`.
 
 ## Alerts and webhooks
 
-| Feature | Docker Compose | AWS full deployment |
-|---|---|---|
-| Polling-based alerts | Yes | Yes |
-| Skydio webhook create/list (outbound API) | Yes | Yes |
-| Inbound Skydio webhook delivery to plugin | No | No |
-| Real-time push via ETL webhook bridge | No | Yes (optional) |
+| Feature | Docker Compose + webhook server | Polling fallback | AWS ETL bridge |
+|---|---|---|---|
+| Real-time alerts via SSE | Yes (recommended) | No | Yes (legacy) |
+| Skydio webhook create/list | Yes | Yes | Yes |
+| Inbound Skydio POST to plugin | No (browser cannot receive HTTP) | No | No |
+| DataSync log on FLIGHT_STATUS | Yes (active mission) | No | Optional |
+
+**Primary path:** Skydio POST → `webhook.ccsosar.net/api/skydio` → SSE `GET /events/skydio` → plugin Alerts tab (+ optional mission log).
+
+**Fallback:** When OAuth/SSE credentials are absent, the plugin can poll the Skydio API for state changes (requires API key only).
 
 See:
 
-- [Skydio_api_templates/webhooks.md](Skydio_api_templates/webhooks.md) — feasibility and management APIs
-- [Skydio_api_templates/webhook_payload.md](Skydio_api_templates/webhook_payload.md) — inbound payload capture
-- [docs/aws-etl-webhook-bridge.md](docs/aws-etl-webhook-bridge.md) — AWS ETL integration
+- [Skydio_api_templates/webhooks.md](Skydio_api_templates/webhooks.md) — webhook server architecture and Skydio management APIs
+- [docs/aws-etl-webhook-bridge.md](docs/aws-etl-webhook-bridge.md) — optional AWS ETL integration
 
 ## Plugin structure
 
 ```
 index.ts              # Plugin entry (menu, route, floating pane)
 api/client.ts         # Skydio API via CloudTAK proxy
-alerts/polling.ts     # Primary alert detection (vehicles + flights)
+api/authentik.ts      # OAuth client_credentials token fetch
+alerts/sse.ts         # Fetch-based SSE client (Bearer auth)
+alerts/webhook.ts     # SSE payload → UI alerts + DataSync logs
+alerts/polling.ts     # Fallback alert detection (vehicles + flights)
 components/           # Settings, Alerts, Webhooks tabs
 storage/settings.ts   # localStorage persistence
 types.ts              # Shared types

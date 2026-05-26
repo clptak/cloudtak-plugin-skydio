@@ -1,5 +1,6 @@
 Skydio_api_templates/
 cloudtak_plugin_docs/
+plugin_context/
 .env
 .env.*
 *backup*

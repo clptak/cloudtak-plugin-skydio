@@ -37,6 +37,7 @@ function detectVehicleAlerts(
         if (!prior.is_online && vehicle.is_online) {
             alerts.push({
                 id: alertId('device_online', vehicle.vehicle_serial),
+                source: 'poll',
                 type: 'device_online',
                 message: `${vehicle.name} came online`,
                 vehicleSerial: vehicle.vehicle_serial,
@@ -46,6 +47,7 @@ function detectVehicleAlerts(
 
         if (prior.is_online && !vehicle.is_online) {
             alerts.push({
+                source: 'poll',
                 id: alertId('device_offline', vehicle.vehicle_serial),
                 type: 'device_offline',
                 message: `${vehicle.name} went offline`,
@@ -56,6 +58,7 @@ function detectVehicleAlerts(
 
         if (!prior.is_live_streaming && vehicle.is_live_streaming) {
             alerts.push({
+                source: 'poll',
                 id: alertId('live_stream_started', vehicle.vehicle_serial),
                 type: 'live_stream_started',
                 message: `${vehicle.name} started live streaming`,
@@ -66,6 +69,7 @@ function detectVehicleAlerts(
 
         if (prior.is_live_streaming && !vehicle.is_live_streaming) {
             alerts.push({
+                source: 'poll',
                 id: alertId('live_stream_ended', vehicle.vehicle_serial),
                 type: 'live_stream_ended',
                 message: `${vehicle.name} ended live streaming`,
@@ -90,6 +94,7 @@ function detectFlightAlerts(
 
         if (!prior) {
             alerts.push({
+                source: 'poll',
                 id: alertId('flight_started', flight.vehicle_serial, flight.flight_id),
                 type: 'flight_started',
                 message: `Flight started on ${flight.vehicle_serial}`,
@@ -102,6 +107,7 @@ function detectFlightAlerts(
 
         if (!prior.landing && flight.landing) {
             alerts.push({
+                source: 'poll',
                 id: alertId('flight_ended', flight.vehicle_serial, flight.flight_id),
                 type: 'flight_ended',
                 message: `Flight ended on ${flight.vehicle_serial}`,
@@ -113,6 +119,7 @@ function detectFlightAlerts(
 
         if (!prior.has_telemetry && flight.has_telemetry) {
             alerts.push({
+                source: 'poll',
                 id: alertId('telemetry_available', flight.vehicle_serial, flight.flight_id),
                 type: 'telemetry_available',
                 message: `Telemetry available for flight on ${flight.vehicle_serial}`,

@@ -62,26 +62,69 @@ export type SkydioAlertType =
     | 'live_stream_started'
     | 'live_stream_ended';
 
+export interface SkydioWebhookAlert {
+    alert_id: string;
+    alert_time: string;
+    alert_type: string;
+    vehicle_serial?: string | null;
+    flight_id?: string | null;
+    mission_template_id?: string | null;
+    mission_execution_id?: string | null;
+    mission_result?: string | null;
+}
+
+export interface SkydioWebhookSseEvent {
+    source: string;
+    eventType: string;
+    alert: SkydioWebhookAlert;
+}
+
 export interface SkydioAlert {
     id: string;
-    type: SkydioAlertType;
+    source: 'sse' | 'poll';
+    type: string;
     message: string;
     vehicleSerial: string;
     flightId?: string;
     timestamp: string;
+    raw?: SkydioWebhookAlert;
 }
 
 export interface SkydioSettings {
     apiKey: string;
     pollIntervalMs: number;
     pollingEnabled: boolean;
+    authentikTokenUrl: string;
+    oauthClientId: string;
+    oauthClientSecret: string;
+    skydioSseUrl: string;
+    sseEnabled: boolean;
+    flightStatusLogEnabled: boolean;
 }
+
+export const DEFAULT_AUTHENTIK_TOKEN_URL = 'https://users.ccsosar.net/application/o/token/';
+export const DEFAULT_SKYDIO_SSE_URL = 'https://webhook.ccsosar.net/events/skydio';
+export const DEFAULT_SKYDIO_WEBHOOK_URL = 'https://webhook.ccsosar.net/api/skydio';
 
 export const DEFAULT_SETTINGS: SkydioSettings = {
     apiKey: '',
     pollIntervalMs: 30_000,
     pollingEnabled: true,
+    authentikTokenUrl: DEFAULT_AUTHENTIK_TOKEN_URL,
+    oauthClientId: '',
+    oauthClientSecret: '',
+    skydioSseUrl: DEFAULT_SKYDIO_SSE_URL,
+    sseEnabled: true,
+    flightStatusLogEnabled: true,
 };
+
+export function hasSseConfig(settings: SkydioSettings): boolean {
+    return Boolean(
+        settings.oauthClientId.trim()
+        && settings.oauthClientSecret.trim()
+        && settings.skydioSseUrl.trim(),
+    );
+}
 
 export const SKYDIO_API_BASE = 'https://api.skydio.com/api';
 /** @deprecated Use per-user keys via storage/settings.ts */

@@ -3,10 +3,9 @@
         <div class="card mb-3">
             <div class="card-body">
                 <p class="text-muted mb-0">
-                    Vehicles, flights, and telemetry use the Skydio Cloud API directly via
-                    CloudTAK Plugin Proxy. No ETL layer is required for those features.
-                    Webhook registration also calls Skydio directly; inbound delivery still
-                    needs a public HTTPS endpoint (optional ETL layer on AWS).
+                    Register Skydio webhooks to deliver alerts to the webhook server.
+                    The plugin receives events in real time via SSE when OAuth credentials
+                    are configured in Settings.
                 </p>
             </div>
         </div>
@@ -19,6 +18,21 @@
         </div>
 
         <template v-else>
+            <div
+                v-if="showCreatePrompt"
+                class="alert alert-info"
+            >
+                No webhook points at {{ defaultWebhookUrl }}.
+                <button
+                    type="button"
+                    class="btn btn-sm btn-primary ms-2"
+                    :disabled="loading"
+                    @click="createDefault"
+                >
+                    Create if missing
+                </button>
+            </div>
+
             <div class="card mb-3">
                 <div class="card-header">
                     <div class="card-title">
@@ -29,15 +43,15 @@
                     <TablerInput
                         v-model="form.name"
                         label="Name"
-                        placeholder="CloudTAK ETL"
-                        :description="'Display name in Skydio Cloud (max 128 characters)'"
+                        placeholder="CloudTAK webhook"
+                        description="Display name in Skydio Cloud (max 128 characters)"
                     />
                     <TablerInput
                         v-model="form.url"
                         class="mt-3"
                         label="URL"
-                        placeholder="https://webhooks.example.com/your-layer-uuid"
-                        :description="'Public HTTPS endpoint Skydio will POST events to. Optional unless you want inbound alerts via ETL.'"
+                        placeholder="https://webhook.ccsosar.net/api/skydio"
+                        description="Register this URL in Skydio so events reach the webhook server and SSE stream."
                     />
 
                     <div class="d-flex align-items-center mt-3">
@@ -124,19 +138,31 @@ import { computed, ref, reactive, watch, onMounted } from 'vue';
 import { TablerInput, TablerLoading, TablerAlert } from '@tak-ps/vue-tabler';
 import { createWebhook, listWebhooks } from '../api/client';
 import { ProxyError } from '../api/proxy';
+import { DEFAULT_SKYDIO_WEBHOOK_URL } from '../types';
 import type { SkydioWebhook } from '../types';
 
 const props = defineProps<{
     apiKey: string;
 }>();
 
+const defaultWebhookUrl = DEFAULT_SKYDIO_WEBHOOK_URL;
 const webhooks = ref<SkydioWebhook[]>([]);
+const loaded = ref(false);
 const loading = ref(false);
 const error = ref<Error | undefined>();
 const success = ref<string | null>(null);
-const form = reactive({ name: '', url: '' });
+const form = reactive({
+    name: 'CloudTAK webhook',
+    url: DEFAULT_SKYDIO_WEBHOOK_URL,
+});
 
 const canCreate = computed(() => Boolean(form.name.trim() && form.url.trim()));
+
+const showCreatePrompt = computed(() => (
+    loaded.value
+    && !loading.value
+    && !webhooks.value.some((wh) => wh.url === defaultWebhookUrl)
+));
 
 function toError(err: unknown, fallback: string): Error {
     if (err instanceof ProxyError || err instanceof Error) {
@@ -158,6 +184,7 @@ async function refresh(): Promise<void> {
         error.value = toError(err, 'Failed to load webhooks');
     } finally {
         loading.value = false;
+        loaded.value = true;
     }
 }
 
@@ -172,13 +199,17 @@ async function create(): Promise<void> {
         const created = await createWebhook(props.apiKey, form.name, form.url);
         webhooks.value = [created, ...webhooks.value.filter((w) => w.id !== created.id)];
         success.value = `${created.name} registered in Skydio Cloud.`;
-        form.name = '';
-        form.url = '';
     } catch (err) {
         error.value = toError(err, 'Failed to create webhook');
     } finally {
         loading.value = false;
     }
+}
+
+async function createDefault(): Promise<void> {
+    form.name = 'CloudTAK webhook';
+    form.url = defaultWebhookUrl;
+    await create();
 }
 
 watch(() => props.apiKey, () => void refresh());

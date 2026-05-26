@@ -7,8 +7,13 @@
     "skipLibCheck": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "../../../src/std.ts": ["stubs/std.ts"],
+      "../../../src/stores/map.ts": ["stubs/map-store.ts"]
+    }
   },
-  "include": ["**/*.ts", "components/**/*.vue", "env.d.ts"],
+  "include": ["**/*.ts", "components/**/*.vue", "env.d.ts", "stubs/**/*.ts"],
   "exclude": ["node_modules", "cloudtak_plugin_docs/example.ts"]
 }

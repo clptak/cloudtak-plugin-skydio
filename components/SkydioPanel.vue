@@ -29,8 +29,10 @@
             v-else-if="activeTab === 'alerts'"
             :settings="settings"
             :alerts="alerts"
-            :status="pollStatus"
-            :error="pollError"
+            :sse-status="sseStatus"
+            :poll-status="pollStatus"
+            :sse-configured="sseConfigured"
+            :error="alertsError"
             :api-key-configured="Boolean(settings.apiKey)"
             @save="onSaveSettings"
         />
@@ -42,8 +44,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
 import { TablerPillGroup } from '@tak-ps/vue-tabler';
+import { useMapStore } from '../../../src/stores/map.ts';
+import { std } from '../../../src/std.ts';
 import GetFlightsTab from './GetFlightsTab.vue';
 import MissionPlanningTab from './MissionPlanningTab.vue';
 import VehiclesTab from './VehiclesTab.vue';
@@ -56,7 +60,23 @@ import { loadSettings, saveSettings } from '../storage/settings';
 import { loadVehicles, saveVehicles } from '../storage/vehicles';
 import { getCurrentUserId } from '../storage/user';
 import { AlertPoller } from '../alerts/polling';
-import type { SkydioAlert, SkydioSettings, SkydioVehicle } from '../types';
+import { SkydioSseClient, type SseStatus } from '../alerts/sse';
+import { hasSseConfig, type SkydioAlert, type SkydioSettings, type SkydioVehicle, type SkydioWebhookAlert } from '../types';
+
+async function logFlightStatusToMission(
+    alert: SkydioWebhookAlert,
+    message: string,
+    missionGuid: string,
+): Promise<void> {
+    await std(`/api/marti/missions/${encodeURIComponent(missionGuid)}/log`, {
+        method: 'POST',
+        body: {
+            content: `Skydio: ${message}`,
+            dtg: alert.alert_time,
+            keywords: ['skydio', 'flight_status'],
+        },
+    });
+}
 
 const tabs = [
     { value: 'flights', label: 'Get Flights' },
@@ -67,6 +87,7 @@ const tabs = [
     { value: 'webhooks', label: 'Webhooks' },
 ];
 
+const mapStore = useMapStore();
 const activeTab = ref('flights');
 const currentUserId = ref(getCurrentUserId());
 const settings = reactive<SkydioSettings>(loadSettings());
@@ -75,29 +96,53 @@ const vehiclesLoading = ref(false);
 const vehiclesCached = ref(vehicles.value.length > 0);
 const vehiclesError = ref<Error | undefined>();
 const alerts = ref<SkydioAlert[]>([]);
-const pollError = ref<string | null>(null);
+const alertsError = ref<string | null>(null);
 const pollStatus = ref<{ lastPoll: string | null; polling: boolean }>({
     lastPoll: null,
     polling: false,
 });
+const sseStatus = ref<SseStatus>({
+    connected: false,
+    reconnecting: false,
+    lastEvent: null,
+});
+
+const sseConfigured = computed(() => hasSseConfig(settings) && settings.sseEnabled);
+
+function pushAlert(alert: SkydioAlert): void {
+    alerts.value = [alert, ...alerts.value].slice(0, 100);
+}
 
 const poller = new AlertPoller({
-    onAlert: (alert) => {
-        alerts.value = [alert, ...alerts.value].slice(0, 100);
-    },
+    onAlert: pushAlert,
     onError: (error) => {
-        pollError.value = error;
+        alertsError.value = error;
     },
     onStatus: (status) => {
         pollStatus.value = status;
     },
 });
 
-function applyPolling(): void {
-    poller.stop();
-    pollError.value = null;
+const sseClient = new SkydioSseClient({
+    onAlert: pushAlert,
+    onError: (error) => {
+        alertsError.value = error;
+    },
+    onStatus: (status) => {
+        sseStatus.value = status;
+    },
+    getMissionGuid: () => mapStore.mission?.meta.guid,
+    onFlightStatusLog: logFlightStatusToMission,
+});
 
-    if (settings.pollingEnabled && settings.apiKey) {
+function applyAlerts(): void {
+    sseClient.stop();
+    poller.stop();
+    alertsError.value = null;
+
+    if (sseConfigured.value) {
+        sseClient.start(settings);
+    } else if (settings.apiKey && settings.pollingEnabled) {
         poller.start(settings.apiKey, settings.pollIntervalMs);
     }
 }
@@ -129,10 +174,14 @@ function onSaveSettings(next: SkydioSettings): void {
     const normalized = {
         ...next,
         apiKey: next.apiKey.trim(),
+        oauthClientId: next.oauthClientId.trim(),
+        oauthClientSecret: next.oauthClientSecret.trim(),
+        authentikTokenUrl: next.authentikTokenUrl.trim(),
+        skydioSseUrl: next.skydioSseUrl.trim(),
     };
     Object.assign(settings, normalized);
     saveSettings(normalized);
-    applyPolling();
+    applyAlerts();
     void refreshVehicles();
 }
 
@@ -146,8 +195,8 @@ function reloadForUser(): void {
     vehiclesCached.value = vehicles.value.length > 0;
     vehiclesError.value = undefined;
     alerts.value = [];
-    pollError.value = null;
-    applyPolling();
+    alertsError.value = null;
+    applyAlerts();
     void refreshVehicles();
 }
 
@@ -155,7 +204,7 @@ let userCheckTimer: ReturnType<typeof setInterval> | undefined;
 
 onMounted(() => {
     reloadForUser();
-    applyPolling();
+    applyAlerts();
     void refreshVehicles();
     window.addEventListener('focus', reloadForUser);
     window.addEventListener('storage', reloadForUser);
@@ -163,6 +212,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    sseClient.stop();
     poller.stop();
     window.removeEventListener('focus', reloadForUser);
     window.removeEventListener('storage', reloadForUser);
@@ -170,7 +220,17 @@ onUnmounted(() => {
 });
 
 watch(
-    () => [settings.apiKey, settings.pollIntervalMs, settings.pollingEnabled],
-    () => applyPolling(),
+    () => [
+        settings.apiKey,
+        settings.pollIntervalMs,
+        settings.pollingEnabled,
+        settings.oauthClientId,
+        settings.oauthClientSecret,
+        settings.authentikTokenUrl,
+        settings.skydioSseUrl,
+        settings.sseEnabled,
+        settings.flightStatusLogEnabled,
+    ],
+    () => applyAlerts(),
 );
 </script>
