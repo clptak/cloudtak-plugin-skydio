@@ -66,6 +66,49 @@ function parseSseFrame(frame: string, onEvent: (eventType: string, data: string)
     }
 }
 
+function isWebhookAlertPayload(value: unknown): value is SkydioWebhookAlert {
+    if (typeof value !== 'object' || value === null) return false;
+    const record = value as Record<string, unknown>;
+    return (
+        typeof record.alert_id === 'string'
+        && typeof record.alert_time === 'string'
+        && typeof record.alert_type === 'string'
+    );
+}
+
+function normalizeSseEventPayload(
+    value: unknown,
+): SkydioWebhookSseEvent | null {
+    if (typeof value !== 'object' || value === null) return null;
+    const record = value as Record<string, unknown>;
+
+    // Preferred payload shape:
+    // { source: "skydio", eventType: "...", alert: { alert_id, ... } }
+    if (isWebhookAlertPayload(record.alert)) {
+        const eventType = typeof record.eventType === 'string'
+            ? record.eventType
+            : record.alert.alert_type;
+        const source = typeof record.source === 'string' ? record.source : 'skydio';
+        return {
+            source,
+            eventType,
+            alert: record.alert,
+        };
+    }
+
+    // Backward-compatible shape:
+    // { alert_id, alert_time, alert_type, ... }
+    if (isWebhookAlertPayload(record)) {
+        return {
+            source: 'skydio',
+            eventType: record.alert_type,
+            alert: record,
+        };
+    }
+
+    return null;
+}
+
 async function readSseStream(
     stream: ReadableStream<Uint8Array>,
     onEvent: (eventType: string, data: string) => void,
@@ -212,15 +255,17 @@ export class SkydioSseClient {
         const trimmed = data.trim();
         if (!trimmed.startsWith('{')) return;
 
-        let event: SkydioWebhookSseEvent;
+        let parsed: unknown;
         try {
-            event = JSON.parse(trimmed) as SkydioWebhookSseEvent;
+            parsed = JSON.parse(trimmed) as unknown;
         } catch {
             this.onError(`Received invalid SSE JSON payload: ${trimmed.slice(0, 120)}`);
             return;
         }
 
-        if (event.source !== 'skydio') return;
+        const event = normalizeSseEventPayload(parsed);
+        if (!event) return;
+        if (event.source && event.source !== 'skydio') return;
 
         this.lastEvent = new Date().toISOString();
         this.emitStatus({ connected: true, reconnecting: false, lastEvent: this.lastEvent });
