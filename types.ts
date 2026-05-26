@@ -71,6 +71,8 @@ export interface SkydioWebhookAlert {
     mission_template_id?: string | null;
     mission_execution_id?: string | null;
     mission_result?: string | null;
+    /** Nested resource.type from cloud events (e.g. FLIGHT_START, FLIGHT_END). */
+    resource_type?: string | null;
 }
 
 export interface SkydioWebhookSseEvent {

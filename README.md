@@ -43,7 +43,7 @@ The plugin automatically uses `http://localhost:8080/webhook-sse/events/skydio` 
 | Real-time alerts via SSE | Yes (recommended) | No | Yes (legacy) |
 | Skydio webhook create/list | Yes | Yes | Yes |
 | Inbound Skydio POST to plugin | No (browser cannot receive HTTP) | No | No |
-| DataSync log on FLIGHT_STATUS / FLIGHT_STATE | Yes (active mission) | No | Optional |
+| DataSync log on FLIGHT_START / FLIGHT_END (and legacy FLIGHT_STATUS) | Yes (active mission) | No | Optional |
 
 **Primary path:** Skydio POST → your webhook URL → SSE stream URL from Settings → plugin Alerts tab (+ optional mission log).
 

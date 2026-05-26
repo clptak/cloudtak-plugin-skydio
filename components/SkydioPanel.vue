@@ -74,7 +74,7 @@ async function logFlightStatusToMission(
         body: {
             content: `Skydio: ${message}`,
             dtg: alert.alert_time,
-            keywords: ['skydio', 'flight_status'],
+            keywords: ['skydio', alert.resource_type?.toLowerCase() || 'flight_status'],
         },
     });
 }
