@@ -10,22 +10,32 @@ export function flightLabel(vehicleSerial: string, takeoff: string | undefined):
     return `${vehicleSerial} ${formatTakeoff(takeoff)}`.trim();
 }
 
+type GeoJsonPosition = [number, number, number];
+
 export interface GeoJsonFeatureCollection {
     type: 'FeatureCollection';
-    features: GeoJsonFeature[];
+    features: GeoJsonLineStringFeature[];
 }
 
-export interface GeoJsonFeature {
+export interface GeoJsonLineStringFeature {
     type: 'Feature';
     geometry: {
-        type: 'Point';
-        coordinates: [number, number, number];
+        type: 'LineString';
+        coordinates: GeoJsonPosition[];
     };
     properties: {
         callsign: string;
         remarks: string;
-        timestamp?: string;
+        pointCount: number;
+        startTime?: string;
+        endTime?: string;
     };
+}
+
+function lineStringCoordinates(positions: GeoJsonPosition[]): GeoJsonPosition[] {
+    if (positions.length === 0) return [];
+    if (positions.length === 1) return [positions[0], positions[0]];
+    return positions;
 }
 
 export function telemetryToGeoJson(
@@ -36,25 +46,41 @@ export function telemetryToGeoJson(
     const callsign = flightLabel(flight.vehicle_serial, flight.takeoff);
     const remarks = flight.flight_id;
 
-    const features: GeoJsonFeature[] = points
-        .filter((point) => point.gps_latitude != null && point.gps_longitude != null)
-        .map((point) => {
-            const z = point.gps_altitude ?? point.height_above_takeoff ?? 0;
-            return {
-                type: 'Feature' as const,
-                geometry: {
-                    type: 'Point' as const,
-                    coordinates: [point.gps_longitude!, point.gps_latitude!, z],
-                },
-                properties: {
-                    callsign,
-                    remarks,
-                    timestamp: point.timestamp,
-                },
-            };
-        });
+    const validPoints = points.filter(
+        (point) => point.gps_latitude != null && point.gps_longitude != null,
+    );
 
-    return { type: 'FeatureCollection', features };
+    const coordinates = lineStringCoordinates(
+        validPoints.map((point) => {
+            const z = point.gps_altitude ?? point.height_above_takeoff ?? 0;
+            return [point.gps_longitude!, point.gps_latitude!, z] as GeoJsonPosition;
+        }),
+    );
+
+    if (coordinates.length === 0) {
+        return { type: 'FeatureCollection', features: [] };
+    }
+
+    const startTime = validPoints[0]?.timestamp;
+    const endTime = validPoints[validPoints.length - 1]?.timestamp;
+
+    return {
+        type: 'FeatureCollection',
+        features: [{
+            type: 'Feature',
+            geometry: {
+                type: 'LineString',
+                coordinates,
+            },
+            properties: {
+                callsign,
+                remarks,
+                pointCount: validPoints.length,
+                startTime,
+                endTime,
+            },
+        }],
+    };
 }
 
 export function downloadGeoJson(collection: GeoJsonFeatureCollection, filename: string): void {
