@@ -1,4 +1,4 @@
-import { proxyRequest } from './proxy';
+import { proxyRequest, ProxyError } from './proxy';
 
 export interface OAuthTokenResponse {
     access_token: string;
@@ -24,6 +24,44 @@ function isCorsOrNetworkError(err: unknown): boolean {
         || message.includes('cors');
 }
 
+function parseOAuthTokenPayload(
+    body: unknown,
+    upstreamStatus: number,
+    context: string,
+): OAuthTokenResponse {
+    let payload = body;
+
+    if (typeof payload === 'string') {
+        const trimmed = payload.trim();
+        if (!trimmed) {
+            throw new Error(`${context}: empty response (HTTP ${upstreamStatus})`);
+        }
+        try {
+            payload = JSON.parse(trimmed);
+        } catch {
+            throw new Error(`${context}: non-JSON response (HTTP ${upstreamStatus})`);
+        }
+    }
+
+    if (typeof payload !== 'object' || payload === null) {
+        throw new Error(`${context}: unexpected response format (HTTP ${upstreamStatus})`);
+    }
+
+    const record = payload as Record<string, unknown>;
+    if (typeof record.access_token === 'string' && record.access_token.length > 0) {
+        return payload as OAuthTokenResponse;
+    }
+
+    const parts: string[] = [];
+    if (typeof record.error === 'string') parts.push(record.error);
+    if (typeof record.error_description === 'string') parts.push(record.error_description);
+    if (parts.length > 0) {
+        throw new Error(`Authentik token error (HTTP ${upstreamStatus}): ${parts.join(' — ')}`);
+    }
+
+    throw new Error(`${context}: missing access_token (HTTP ${upstreamStatus})`);
+}
+
 async function fetchTokenDirect(tokenUrl: string, body: string): Promise<OAuthTokenResponse> {
     const res = await fetch(tokenUrl, {
         method: 'POST',
@@ -38,44 +76,22 @@ async function fetchTokenDirect(tokenUrl: string, body: string): Promise<OAuthTo
         throw new Error(`Authentik token endpoint returned non-JSON (${res.status})`);
     }
 
-    if (!res.ok) {
-        const message = (payload as { error_description?: string; error?: string }).error_description
-            ?? (payload as { error?: string }).error
-            ?? `Authentik token request failed (${res.status})`;
-        throw new Error(message);
-    }
-
-    const token = payload as OAuthTokenResponse;
-    if (!token.access_token) {
-        throw new Error('Authentik token response missing access_token');
-    }
-
-    return token;
+    return parseOAuthTokenPayload(payload, res.status, 'Authentik token response');
 }
 
 async function fetchTokenViaProxy(tokenUrl: string, body: string): Promise<OAuthTokenResponse> {
-    const res = await proxyRequest<string>({
+    const res = await proxyRequest<unknown>({
         url: tokenUrl,
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body,
     });
 
-    if (typeof res.body === 'string') {
-        try {
-            const parsed = JSON.parse(res.body) as OAuthTokenResponse;
-            if (parsed.access_token) return parsed;
-        } catch {
-            throw new Error('Authentik token proxy response was not valid JSON');
-        }
-    }
-
-    const token = res.body as unknown as OAuthTokenResponse;
-    if (!token?.access_token) {
-        throw new Error('Authentik token proxy response missing access_token');
-    }
-
-    return token;
+    return parseOAuthTokenPayload(
+        res.body,
+        res.status,
+        'Authentik token proxy response',
+    );
 }
 
 export async function fetchClientCredentialsToken(opts: {
@@ -87,6 +103,16 @@ export async function fetchClientCredentialsToken(opts: {
     const clientId = opts.clientId.trim();
     const clientSecret = opts.clientSecret.trim();
     const body = buildTokenBody(clientId, clientSecret);
+
+    // Prefer CloudTAK Plugin Proxy — Authentik token POST is blocked by browser CORS.
+    if (localStorage.token) {
+        try {
+            return await fetchTokenViaProxy(tokenUrl, body);
+        } catch (err) {
+            if (err instanceof ProxyError) throw err;
+            // Fall through to direct fetch for non-proxy environments.
+        }
+    }
 
     try {
         return await fetchTokenDirect(tokenUrl, body);
