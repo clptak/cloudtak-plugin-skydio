@@ -6,13 +6,13 @@
         />
 
         <GetFlightsTab
-            v-if='activeTab === &apos;flights&apos;'
+            v-if='activeTab === "flights"'
             :api-key='settings.apiKey'
             :vehicles='vehicles'
         />
-        <MissionPlanningTab v-else-if='activeTab === &apos;missions&apos;' />
+        <MissionPlanningTab v-else-if='activeTab === "missions"' />
         <VehiclesTab
-            v-else-if='activeTab === &apos;vehicles&apos;'
+            v-else-if='activeTab === "vehicles"'
             :api-key='settings.apiKey'
             :vehicles='vehicles'
             :loading='vehiclesLoading'
@@ -21,12 +21,12 @@
             @refresh='refreshVehicles'
         />
         <SettingsTab
-            v-else-if='activeTab === &apos;settings&apos;'
+            v-else-if='activeTab === "settings"'
             :settings='settings'
             @save='onSaveSettings'
         />
         <AlertsTab
-            v-else-if='activeTab === &apos;alerts&apos;'
+            v-else-if='activeTab === "alerts"'
             :settings='settings'
             :alerts='alerts'
             :sse-status='sseStatus'
@@ -37,7 +37,7 @@
             @save='onSaveSettings'
         />
         <WebhooksTab
-            v-else-if='activeTab === &apos;webhooks&apos;'
+            v-else-if='activeTab === "webhooks"'
             :api-key='settings.apiKey'
         />
     </div>

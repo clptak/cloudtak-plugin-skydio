@@ -9,7 +9,7 @@
                     type='button'
                     class='btn btn-primary'
                     :disabled='loading || !apiKey'
-                    @click='emit(&apos;refresh&apos;)'
+                    @click='emit("refresh")'
                 >
                     Refresh Vehicles
                 </button>

@@ -99,7 +99,7 @@
                 <div
                     v-if='testResult'
                     class='alert mt-3'
-                    :class='testResult.ok ? &apos;alert-success&apos; : &apos;alert-danger&apos;'
+                    :class='testResult.ok ? "alert-success" : "alert-danger"'
                 >
                     {{ testResult.message }}
                 </div>
