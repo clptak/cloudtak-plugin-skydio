@@ -1,7 +1,7 @@
 import { fetchClientCredentialsToken } from '../api/authentik';
 import { resolveSkydioSseUrl } from '../lib/sse-url';
 import { handleSkydioSseEvent } from './webhook';
-import type { SkydioAlert, SkydioSettings, SkydioWebhookAlert, SkydioWebhookSseEvent } from '../types';
+import type { SkydioSettings, SkydioWebhookAlert, SkydioWebhookSseEvent } from '../types';
 import type { AlertListener } from './polling';
 
 export interface SseStatus {

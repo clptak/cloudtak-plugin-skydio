@@ -1,15 +1,15 @@
 <template>
-    <div class="col-12 py-3">
-        <div class="d-flex align-items-center mb-3">
-            <div class="h3 mb-0">
+    <div class='col-12 py-3'>
+        <div class='d-flex align-items-center mb-3'>
+            <div class='h3 mb-0'>
                 Vehicles
             </div>
-            <div class="ms-auto">
+            <div class='ms-auto'>
                 <button
-                    type="button"
-                    class="btn btn-primary"
-                    :disabled="loading || !apiKey"
-                    @click="emit('refresh')"
+                    type='button'
+                    class='btn btn-primary'
+                    :disabled='loading || !apiKey'
+                    @click='emit(&apos;refresh&apos;)'
                 >
                     Refresh Vehicles
                 </button>
@@ -17,42 +17,42 @@
         </div>
 
         <div
-            v-if="!apiKey"
-            class="alert alert-warning"
+            v-if='!apiKey'
+            class='alert alert-warning'
         >
             Configure your API key in Settings first.
         </div>
 
         <p
-            v-if="cached && vehicles.length > 0 && loading"
-            class="text-muted small"
+            v-if='cached && vehicles.length > 0 && loading'
+            class='text-muted small'
         >
             Showing cached vehicles while refreshing from Skydio…
         </p>
 
         <TablerLoading
-            v-if="loading && vehicles.length === 0"
-            :compact="true"
-            desc="Loading vehicles from Skydio…"
+            v-if='loading && vehicles.length === 0'
+            :compact='true'
+            desc='Loading vehicles from Skydio…'
         />
 
         <TablerAlert
-            v-if="error"
-            :err="error"
+            v-if='error'
+            :err='error'
         />
 
         <div
-            v-if="vehicles.length === 0 && !loading && apiKey && !error"
-            class="text-muted"
+            v-if='vehicles.length === 0 && !loading && apiKey && !error'
+            class='text-muted'
         >
             No vehicles loaded yet.
         </div>
 
         <div
-            v-if="vehicles.length > 0"
-            class="table-responsive"
+            v-if='vehicles.length > 0'
+            class='table-responsive'
         >
-            <table class="table table-sm table-vcenter">
+            <table class='table table-sm table-vcenter'>
                 <thead>
                     <tr>
                         <th>Vehicle Serial</th>
@@ -64,8 +64,8 @@
                 </thead>
                 <tbody>
                     <tr
-                        v-for="vehicle in vehicles"
-                        :key="vehicle.vehicle_serial"
+                        v-for='vehicle in vehicles'
+                        :key='vehicle.vehicle_serial'
                     >
                         <td>{{ vehicle.vehicle_serial }}</td>
                         <td>{{ vehicle.name }}</td>

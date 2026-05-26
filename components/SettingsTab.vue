@@ -1,26 +1,26 @@
 <template>
-    <div class="col-12 py-3">
-        <div class="card mb-3">
-            <div class="card-header">
-                <div class="card-title">
+    <div class='col-12 py-3'>
+        <div class='card mb-3'>
+            <div class='card-header'>
+                <div class='card-title'>
                     Skydio API Settings
                 </div>
             </div>
-            <div class="card-body">
+            <div class='card-body'>
                 <TablerInput
-                    v-model="local.apiKey"
-                    label="API Key"
-                    type="password"
-                    placeholder="Skydio Cloud API token"
-                    description="Used for vehicles, flights, telemetry, and webhook registration. Stored per CloudTAK user in this browser. Requires Plugin Proxy with https://api.skydio.com whitelisted."
+                    v-model='local.apiKey'
+                    label='API Key'
+                    type='password'
+                    placeholder='Skydio Cloud API token'
+                    description='Used for vehicles, flights, telemetry, and webhook registration. Stored per CloudTAK user in this browser. Requires Plugin Proxy with https://api.skydio.com whitelisted.'
                 />
 
-                <div class="d-flex align-items-center mt-3">
+                <div class='d-flex align-items-center mt-3'>
                     <button
-                        type="button"
-                        class="btn btn-primary"
-                        :disabled="!local.apiKey.trim()"
-                        @click="saveApiKey"
+                        type='button'
+                        class='btn btn-primary'
+                        :disabled='!local.apiKey.trim()'
+                        @click='saveApiKey'
                     >
                         Save API Key
                     </button>
@@ -28,78 +28,78 @@
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">
+        <div class='card'>
+            <div class='card-header'>
+                <div class='card-title'>
                     Webhook SSE (Authentik)
                 </div>
             </div>
-            <div class="card-body">
-                <p class="text-muted">
+            <div class='card-body'>
+                <p class='text-muted'>
                     Connect to the webhook server SSE stream for real-time Skydio alerts.
                     Use credentials from the Authentik <code>webhook-sse</code> OAuth2 application.
                 </p>
 
                 <TablerInput
-                    v-model="local.authentikTokenUrl"
-                    label="Authentik Token URL"
-                    placeholder="https://users.ccsosar.net/application/o/token/"
-                    description="OAuth2 token endpoint for client_credentials grant."
+                    v-model='local.authentikTokenUrl'
+                    label='Authentik Token URL'
+                    placeholder='https://users.ccsosar.net/application/o/token/'
+                    description='OAuth2 token endpoint for client_credentials grant.'
                 />
                 <TablerInput
-                    v-model="local.oauthClientId"
-                    class="mt-3"
-                    label="Client ID"
-                    placeholder="Authentik OAuth2 client ID"
+                    v-model='local.oauthClientId'
+                    class='mt-3'
+                    label='Client ID'
+                    placeholder='Authentik OAuth2 client ID'
                 />
                 <TablerInput
-                    v-model="local.oauthClientSecret"
-                    class="mt-3"
-                    label="Client Secret"
-                    type="password"
-                    placeholder="Authentik OAuth2 client secret"
-                    description="Leave blank to keep the saved secret. Re-enter and save after rotating credentials in Authentik."
+                    v-model='local.oauthClientSecret'
+                    class='mt-3'
+                    label='Client Secret'
+                    type='password'
+                    placeholder='Authentik OAuth2 client secret'
+                    description='Leave blank to keep the saved secret. Re-enter and save after rotating credentials in Authentik.'
                 />
                 <TablerInput
-                    v-model="local.skydioSseUrl"
-                    class="mt-3"
-                    label="Skydio SSE URL"
-                    placeholder="https://webhook.ccsosar.net/events/skydio"
-                    description="Requires Plugin Proxy whitelist for https://webhook.ccsosar.net and CORS on the webhook server."
+                    v-model='local.skydioSseUrl'
+                    class='mt-3'
+                    label='Skydio SSE URL'
+                    placeholder='https://webhook.ccsosar.net/events/skydio'
+                    description='Requires Plugin Proxy whitelist for https://webhook.ccsosar.net and CORS on the webhook server.'
                 />
 
-                <label class="form-check mt-3">
+                <label class='form-check mt-3'>
                     <input
-                        v-model="local.sseEnabled"
-                        class="form-check-input"
-                        type="checkbox"
+                        v-model='local.sseEnabled'
+                        class='form-check-input'
+                        type='checkbox'
                     >
-                    <span class="form-check-label">Enable webhook SSE alerts</span>
+                    <span class='form-check-label'>Enable webhook SSE alerts</span>
                 </label>
 
-                <div class="d-flex align-items-center gap-2 mt-3">
+                <div class='d-flex align-items-center gap-2 mt-3'>
                     <button
-                        type="button"
-                        class="btn btn-primary"
-                        :disabled="!canSaveSse"
-                        @click="saveSse"
+                        type='button'
+                        class='btn btn-primary'
+                        :disabled='!canSaveSse'
+                        @click='saveSse'
                     >
                         Save Webhook SSE Settings
                     </button>
                     <button
-                        type="button"
-                        class="btn btn-secondary"
-                        :disabled="!canTestSse || testing"
-                        @click="testConnection"
+                        type='button'
+                        class='btn btn-secondary'
+                        :disabled='!canTestSse || testing'
+                        @click='testConnection'
                     >
                         {{ testing ? 'Testing…' : 'Test Authentik Token' }}
                     </button>
                 </div>
 
                 <div
-                    v-if="testResult"
-                    class="alert mt-3"
-                    :class="testResult.ok ? 'alert-success' : 'alert-danger'"
+                    v-if='testResult'
+                    class='alert mt-3'
+                    :class='testResult.ok ? &apos;alert-success&apos; : &apos;alert-danger&apos;'
                 >
                     {{ testResult.message }}
                 </div>
@@ -107,8 +107,8 @@
         </div>
 
         <div
-            v-if="saved"
-            class="alert alert-success mt-3"
+            v-if='saved'
+            class='alert alert-success mt-3'
         >
             Settings saved for this CloudTAK user in this browser.
         </div>

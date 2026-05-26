@@ -1,78 +1,78 @@
 <template>
-    <div class="col-12 py-3">
+    <div class='col-12 py-3'>
         <div
-            v-if="sseConfigured"
-            class="card mb-3"
+            v-if='sseConfigured'
+            class='card mb-3'
         >
-            <div class="card-header">
-                <div class="card-title">
+            <div class='card-header'>
+                <div class='card-title'>
                     Webhook SSE Connection
                 </div>
             </div>
-            <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
+            <div class='card-body'>
+                <div class='d-flex align-items-center mb-3'>
                     <span
-                        class="status-dot me-2"
-                        :class="sseDotClass"
+                        class='status-dot me-2'
+                        :class='sseDotClass'
                     />
-                    <span v-if="sseStatus.connected">SSE connected</span>
-                    <span v-else-if="sseStatus.reconnecting">SSE reconnecting…</span>
+                    <span v-if='sseStatus.connected'>SSE connected</span>
+                    <span v-else-if='sseStatus.reconnecting'>SSE reconnecting…</span>
                     <span v-else>SSE disconnected</span>
-                    <template v-if="sseStatus.lastEvent">
-                        <span class="text-muted ms-1">
+                    <template v-if='sseStatus.lastEvent'>
+                        <span class='text-muted ms-1'>
                             — last event {{ formatTime(sseStatus.lastEvent) }}
                         </span>
                     </template>
                 </div>
 
-                <label class="form-check">
+                <label class='form-check'>
                     <input
-                        v-model="local.flightStatusLogEnabled"
-                        class="form-check-input"
-                        type="checkbox"
-                        @change="saveAlertSettings"
+                        v-model='local.flightStatusLogEnabled'
+                        class='form-check-input'
+                        type='checkbox'
+                        @change='saveAlertSettings'
                     >
-                    <span class="form-check-label">Log FLIGHT_STATUS to active mission</span>
+                    <span class='form-check-label'>Log FLIGHT_STATUS to active mission</span>
                 </label>
             </div>
         </div>
 
         <div
             v-else
-            class="card mb-3"
+            class='card mb-3'
         >
-            <div class="card-header">
-                <div class="card-title">
+            <div class='card-header'>
+                <div class='card-title'>
                     Polling Settings (fallback)
                 </div>
             </div>
-            <div class="card-body">
+            <div class='card-body'>
                 <TablerInput
-                    v-model.number="intervalSeconds"
-                    label="Poll interval (seconds)"
-                    type="number"
-                    description="Used when webhook SSE credentials are not configured."
-                    @change="saveAlertSettings"
+                    v-model.number='intervalSeconds'
+                    label='Poll interval (seconds)'
+                    type='number'
+                    description='Used when webhook SSE credentials are not configured.'
+                    @change='saveAlertSettings'
                 />
 
-                <label class="form-check mt-3">
+                <label class='form-check mt-3'>
                     <input
-                        v-model="local.pollingEnabled"
-                        class="form-check-input"
-                        type="checkbox"
-                        @change="saveAlertSettings"
+                        v-model='local.pollingEnabled'
+                        class='form-check-input'
+                        type='checkbox'
+                        @change='saveAlertSettings'
                     >
-                    <span class="form-check-label">Enable polling-based alerts</span>
+                    <span class='form-check-label'>Enable polling-based alerts</span>
                 </label>
 
-                <div class="d-flex align-items-center mt-3">
+                <div class='d-flex align-items-center mt-3'>
                     <span
-                        class="status-dot me-2"
-                        :class="{ active: pollStatus.polling }"
+                        class='status-dot me-2'
+                        :class='{ active: pollStatus.polling }'
                     />
-                    <span v-if="pollStatus.polling">
+                    <span v-if='pollStatus.polling'>
                         Polling active
-                        <template v-if="pollStatus.lastPoll">
+                        <template v-if='pollStatus.lastPoll'>
                             — last poll {{ formatTime(pollStatus.lastPoll) }}
                         </template>
                     </span>
@@ -82,50 +82,50 @@
         </div>
 
         <TablerAlert
-            v-if="error"
-            :err="proxyError"
+            v-if='error'
+            :err='proxyError'
         />
 
         <div
-            v-if="!sseConfigured && !apiKeyConfigured"
-            class="alert alert-warning"
+            v-if='!sseConfigured && !apiKeyConfigured'
+            class='alert alert-warning'
         >
             Configure webhook SSE credentials in Settings, or add a Skydio API key for polling fallback.
         </div>
 
         <div
-            v-else-if="sseConfigured && !apiKeyConfigured"
-            class="alert alert-warning"
+            v-else-if='sseConfigured && !apiKeyConfigured'
+            class='alert alert-warning'
         >
             SSE alerts are configured. Add a Skydio API key in Settings to register webhooks in the Webhooks tab.
         </div>
 
         <div
-            v-else-if="!sseConfigured && apiKeyConfigured && !pollStatus.polling"
-            class="alert alert-warning"
+            v-else-if='!sseConfigured && apiKeyConfigured && !pollStatus.polling'
+            class='alert alert-warning'
         >
             Configure webhook SSE credentials in Settings for real-time alerts, or enable polling above.
         </div>
 
         <div
-            v-if="alerts.length === 0 && (sseConfigured || apiKeyConfigured)"
-            class="text-muted"
+            v-if='alerts.length === 0 && (sseConfigured || apiKeyConfigured)'
+            class='text-muted'
         >
             No alerts yet. Waiting for Skydio events…
         </div>
 
-        <template v-else-if="alerts.length > 0">
+        <template v-else-if='alerts.length > 0'>
             <div
-                v-for="alert in alerts"
-                :key="alert.id"
-                class="border-bottom py-2"
+                v-for='alert in alerts'
+                :key='alert.id'
+                class='border-bottom py-2'
             >
-                <div class="fw-bold text-capitalize">
+                <div class='fw-bold text-capitalize'>
                     {{ formatType(alert.type) }}
-                    <span class="small text-muted fw-normal">({{ alert.source }})</span>
+                    <span class='small text-muted fw-normal'>({{ alert.source }})</span>
                 </div>
                 <div>{{ alert.message }}</div>
-                <div class="small text-muted">
+                <div class='small text-muted'>
                     {{ formatTime(alert.timestamp) }}
                 </div>
             </div>

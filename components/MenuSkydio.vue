@@ -1,5 +1,5 @@
 <template>
-    <MenuTemplate name="Skydio">
+    <MenuTemplate name='Skydio'>
         <SkydioPanel />
     </MenuTemplate>
 </template>

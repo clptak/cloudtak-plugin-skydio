@@ -1,54 +1,54 @@
 <template>
-    <div class="col-12 py-3">
-        <form @submit.prevent="searchFlights">
-            <div class="card mb-3">
-                <div class="card-header">
-                    <div class="card-title">
+    <div class='col-12 py-3'>
+        <form @submit.prevent='searchFlights'>
+            <div class='card mb-3'>
+                <div class='card-header'>
+                    <div class='card-title'>
                         Search Flights
                     </div>
                 </div>
-                <div class="card-body">
-                    <label class="form-label">
+                <div class='card-body'>
+                    <label class='form-label'>
                         Vehicle serial (required)
                     </label>
                     <select
-                        v-model="selectedSerials"
-                        class="form-select"
+                        v-model='selectedSerials'
+                        class='form-select'
                         multiple
                         required
-                        size="5"
+                        size='5'
                     >
                         <option
-                            v-for="vehicle in vehicles"
-                            :key="vehicle.vehicle_serial"
-                            :value="vehicle.vehicle_serial"
+                            v-for='vehicle in vehicles'
+                            :key='vehicle.vehicle_serial'
+                            :value='vehicle.vehicle_serial'
                         >
                             {{ vehicle.name }} ({{ vehicle.vehicle_serial }})
                         </option>
                     </select>
-                    <div class="form-hint">
+                    <div class='form-hint'>
                         Hold Cmd/Ctrl to select multiple vehicles. Load vehicles on the Vehicles tab first.
                     </div>
 
                     <TablerInput
-                        v-model="takeoffSince"
-                        class="mt-3"
-                        label="Takeoff since (required)"
-                        type="datetime-local"
+                        v-model='takeoffSince'
+                        class='mt-3'
+                        label='Takeoff since (required)'
+                        type='datetime-local'
                     />
 
                     <TablerInput
-                        v-model="takeoffBefore"
-                        class="mt-3"
-                        label="Takeoff before (optional)"
-                        type="datetime-local"
+                        v-model='takeoffBefore'
+                        class='mt-3'
+                        label='Takeoff before (optional)'
+                        type='datetime-local'
                     />
 
-                    <div class="mt-3">
+                    <div class='mt-3'>
                         <button
-                            type="submit"
-                            class="btn btn-primary"
-                            :disabled="loading || !apiKey || selectedSerials.length === 0 || !takeoffSince"
+                            type='submit'
+                            class='btn btn-primary'
+                            :disabled='loading || !apiKey || selectedSerials.length === 0 || !takeoffSince'
                         >
                             Get Flights
                         </button>
@@ -58,81 +58,81 @@
         </form>
 
         <div
-            v-if="!apiKey"
-            class="alert alert-warning"
+            v-if='!apiKey'
+            class='alert alert-warning'
         >
             Configure your API key in Settings first.
         </div>
 
         <TablerLoading
-            v-if="loading"
-            :compact="true"
-            desc="Loading flights from Skydio…"
+            v-if='loading'
+            :compact='true'
+            desc='Loading flights from Skydio…'
         />
 
         <TablerAlert
-            v-if="error"
-            :err="error"
+            v-if='error'
+            :err='error'
         />
 
         <div
-            v-if="flights.length > 0"
-            class="card"
+            v-if='flights.length > 0'
+            class='card'
         >
-            <div class="card-header">
-                <div class="card-title">
+            <div class='card-header'>
+                <div class='card-title'>
                     Flights
                 </div>
             </div>
-            <div class="card-body">
+            <div class='card-body'>
                 <div
-                    v-for="flight in flights"
-                    :key="flight.flight_id"
-                    class="form-check"
+                    v-for='flight in flights'
+                    :key='flight.flight_id'
+                    class='form-check'
                 >
                     <input
-                        :id="flight.flight_id"
-                        v-model="selectedFlightIds"
-                        class="form-check-input"
-                        type="checkbox"
-                        :value="flight.flight_id"
+                        :id='flight.flight_id'
+                        v-model='selectedFlightIds'
+                        class='form-check-input'
+                        type='checkbox'
+                        :value='flight.flight_id'
                     >
                     <label
-                        class="form-check-label"
-                        :for="flight.flight_id"
+                        class='form-check-label'
+                        :for='flight.flight_id'
                     >
                         {{ flightLabel(flight.vehicle_serial, flight.takeoff) }}
                     </label>
                 </div>
 
-                <div class="mt-3">
+                <div class='mt-3'>
                     <button
-                        type="button"
-                        class="btn btn-primary"
-                        :disabled="downloading || selectedFlightIds.length === 0"
-                        @click="downloadTelemetry"
+                        type='button'
+                        class='btn btn-primary'
+                        :disabled='downloading || selectedFlightIds.length === 0'
+                        @click='downloadTelemetry'
                     >
                         Download Telemetry
                     </button>
                 </div>
 
-                <p class="form-hint mt-2">
+                <p class='form-hint mt-2'>
                     Downloads one GeoJSON file per selected flight. CloudTAK's Plugin Proxy
                     rejects Skydio responses over 1MB, so long flights may fail — try one
                     flight at a time.
                 </p>
 
                 <TablerLoading
-                    v-if="downloading"
-                    class="mt-3"
-                    :compact="true"
-                    desc="Downloading telemetry…"
+                    v-if='downloading'
+                    class='mt-3'
+                    :compact='true'
+                    desc='Downloading telemetry…'
                 />
 
                 <TablerAlert
-                    v-if="downloadError"
-                    class="mt-3"
-                    :err="downloadError"
+                    v-if='downloadError'
+                    class='mt-3'
+                    :err='downloadError'
                 />
             </div>
         </div>

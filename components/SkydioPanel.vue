@@ -1,44 +1,44 @@
 <template>
-    <div class="col-12 py-3">
+    <div class='col-12 py-3'>
         <TablerPillGroup
-            v-model="activeTab"
-            :options="tabs"
+            v-model='activeTab'
+            :options='tabs'
         />
 
         <GetFlightsTab
-            v-if="activeTab === 'flights'"
-            :api-key="settings.apiKey"
-            :vehicles="vehicles"
+            v-if='activeTab === &apos;flights&apos;'
+            :api-key='settings.apiKey'
+            :vehicles='vehicles'
         />
-        <MissionPlanningTab v-else-if="activeTab === 'missions'" />
+        <MissionPlanningTab v-else-if='activeTab === &apos;missions&apos;' />
         <VehiclesTab
-            v-else-if="activeTab === 'vehicles'"
-            :api-key="settings.apiKey"
-            :vehicles="vehicles"
-            :loading="vehiclesLoading"
-            :cached="vehiclesCached"
-            :error="vehiclesError"
-            @refresh="refreshVehicles"
+            v-else-if='activeTab === &apos;vehicles&apos;'
+            :api-key='settings.apiKey'
+            :vehicles='vehicles'
+            :loading='vehiclesLoading'
+            :cached='vehiclesCached'
+            :error='vehiclesError'
+            @refresh='refreshVehicles'
         />
         <SettingsTab
-            v-else-if="activeTab === 'settings'"
-            :settings="settings"
-            @save="onSaveSettings"
+            v-else-if='activeTab === &apos;settings&apos;'
+            :settings='settings'
+            @save='onSaveSettings'
         />
         <AlertsTab
-            v-else-if="activeTab === 'alerts'"
-            :settings="settings"
-            :alerts="alerts"
-            :sse-status="sseStatus"
-            :poll-status="pollStatus"
-            :sse-configured="sseConfigured"
-            :error="alertsError"
-            :api-key-configured="Boolean(settings.apiKey)"
-            @save="onSaveSettings"
+            v-else-if='activeTab === &apos;alerts&apos;'
+            :settings='settings'
+            :alerts='alerts'
+            :sse-status='sseStatus'
+            :poll-status='pollStatus'
+            :sse-configured='sseConfigured'
+            :error='alertsError'
+            :api-key-configured='Boolean(settings.apiKey)'
+            @save='onSaveSettings'
         />
         <WebhooksTab
-            v-else-if="activeTab === 'webhooks'"
-            :api-key="settings.apiKey"
+            v-else-if='activeTab === &apos;webhooks&apos;'
+            :api-key='settings.apiKey'
         />
     </div>
 </template>

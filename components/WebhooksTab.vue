@@ -1,8 +1,8 @@
 <template>
-    <div class="col-12 py-3">
-        <div class="card mb-3">
-            <div class="card-body">
-                <p class="text-muted mb-0">
+    <div class='col-12 py-3'>
+        <div class='card mb-3'>
+            <div class='card-body'>
+                <p class='text-muted mb-0'>
                     Register Skydio webhooks to deliver alerts to the webhook server.
                     The plugin receives events in real time via SSE when OAuth credentials
                     are configured in Settings.
@@ -11,55 +11,55 @@
         </div>
 
         <div
-            v-if="!apiKey"
-            class="alert alert-warning"
+            v-if='!apiKey'
+            class='alert alert-warning'
         >
             Configure your API key in Settings first.
         </div>
 
         <template v-else>
             <div
-                v-if="showCreatePrompt"
-                class="alert alert-info"
+                v-if='showCreatePrompt'
+                class='alert alert-info'
             >
                 No webhook points at {{ defaultWebhookUrl }}.
                 <button
-                    type="button"
-                    class="btn btn-sm btn-primary ms-2"
-                    :disabled="loading"
-                    @click="createDefault"
+                    type='button'
+                    class='btn btn-sm btn-primary ms-2'
+                    :disabled='loading'
+                    @click='createDefault'
                 >
                     Create if missing
                 </button>
             </div>
 
-            <div class="card mb-3">
-                <div class="card-header">
-                    <div class="card-title">
+            <div class='card mb-3'>
+                <div class='card-header'>
+                    <div class='card-title'>
                         Create Webhook
                     </div>
                 </div>
-                <div class="card-body">
+                <div class='card-body'>
                     <TablerInput
-                        v-model="form.name"
-                        label="Name"
-                        placeholder="CloudTAK webhook"
-                        description="Display name in Skydio Cloud (max 128 characters)"
+                        v-model='form.name'
+                        label='Name'
+                        placeholder='CloudTAK webhook'
+                        description='Display name in Skydio Cloud (max 128 characters)'
                     />
                     <TablerInput
-                        v-model="form.url"
-                        class="mt-3"
-                        label="URL"
-                        placeholder="https://webhook.ccsosar.net/api/skydio"
-                        description="Register this URL in Skydio so events reach the webhook server and SSE stream."
+                        v-model='form.url'
+                        class='mt-3'
+                        label='URL'
+                        placeholder='https://webhook.ccsosar.net/api/skydio'
+                        description='Register this URL in Skydio so events reach the webhook server and SSE stream.'
                     />
 
-                    <div class="d-flex align-items-center mt-3">
+                    <div class='d-flex align-items-center mt-3'>
                         <button
-                            type="button"
-                            class="btn btn-primary"
-                            :disabled="loading || !canCreate"
-                            @click="create"
+                            type='button'
+                            class='btn btn-primary'
+                            :disabled='loading || !canCreate'
+                            @click='create'
                         >
                             Create Webhook
                         </button>
@@ -68,61 +68,61 @@
             </div>
 
             <TablerLoading
-                v-if="loading"
-                :compact="true"
-                desc="Contacting Skydio API…"
+                v-if='loading'
+                :compact='true'
+                desc='Contacting Skydio API…'
             />
 
             <TablerAlert
-                v-if="error"
-                class="mt-3"
-                :err="error"
+                v-if='error'
+                class='mt-3'
+                :err='error'
             />
 
             <div
-                v-if="success"
-                class="alert alert-success mt-3"
+                v-if='success'
+                class='alert alert-success mt-3'
             >
                 {{ success }}
             </div>
 
-            <div class="card mt-3">
-                <div class="card-header">
-                    <div class="card-title">
+            <div class='card mt-3'>
+                <div class='card-header'>
+                    <div class='card-title'>
                         Registered Webhooks
                     </div>
-                    <div class="card-actions">
+                    <div class='card-actions'>
                         <button
-                            type="button"
-                            class="btn btn-sm btn-secondary"
-                            :disabled="loading"
-                            @click="refresh"
+                            type='button'
+                            class='btn btn-sm btn-secondary'
+                            :disabled='loading'
+                            @click='refresh'
                         >
                             Refresh
                         </button>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class='card-body'>
                     <div
-                        v-if="webhooks.length === 0 && !loading"
-                        class="text-muted"
+                        v-if='webhooks.length === 0 && !loading'
+                        class='text-muted'
                     >
                         No webhooks registered.
                     </div>
 
                     <template v-else>
                         <div
-                            v-for="wh in webhooks"
-                            :key="wh.id"
-                            class="border-bottom py-2"
+                            v-for='wh in webhooks'
+                            :key='wh.id'
+                            class='border-bottom py-2'
                         >
-                            <div class="fw-bold">
+                            <div class='fw-bold'>
                                 {{ wh.name }}
                             </div>
-                            <div class="small text-muted text-break">
+                            <div class='small text-muted text-break'>
                                 {{ wh.url }}
                             </div>
-                            <div class="small font-monospace text-muted">
+                            <div class='small font-monospace text-muted'>
                                 {{ wh.id }}
                             </div>
                         </div>
