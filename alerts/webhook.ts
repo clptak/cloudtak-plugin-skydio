@@ -8,6 +8,17 @@ function flightLabel(alert: SkydioWebhookAlert): string {
     return alert.flight_id?.trim() || 'unknown flight';
 }
 
+/** Skydio cloud events use FLIGHT_STATE; legacy webhooks used FLIGHT_STATUS. */
+const FLIGHT_STATUS_LOG_TYPES = new Set(['FLIGHT_STATUS', 'FLIGHT_STATE']);
+
+function eventTypeOf(event: SkydioWebhookSseEvent): string {
+    return event.eventType || event.alert.alert_type;
+}
+
+export function shouldLogFlightStatusToMission(event: SkydioWebhookSseEvent): boolean {
+    return FLIGHT_STATUS_LOG_TYPES.has(eventTypeOf(event));
+}
+
 export function webhookAlertToDisplayAlert(event: SkydioWebhookSseEvent): SkydioAlert {
     const alert = event.alert;
     const vehicle = vehicleLabel(alert);
@@ -17,6 +28,7 @@ export function webhookAlertToDisplayAlert(event: SkydioWebhookSseEvent): Skydio
     let message: string;
     switch (eventType) {
         case 'FLIGHT_STATUS':
+        case 'FLIGHT_STATE':
             message = `Flight status: vehicle ${vehicle}, flight ${flight}`;
             break;
         case 'ONLINE_STATUS':
@@ -81,7 +93,7 @@ export async function handleSkydioSseEvent(
     const displayAlert = webhookAlertToDisplayAlert(event);
     opts.onAlert(displayAlert);
 
-    if (event.eventType !== 'FLIGHT_STATUS' || !opts.flightStatusLogEnabled) {
+    if (!opts.flightStatusLogEnabled || !shouldLogFlightStatusToMission(event)) {
         return;
     }
 

@@ -32,7 +32,7 @@
                         type='checkbox'
                         @change='saveAlertSettings'
                     >
-                    <span class='form-check-label'>Log FLIGHT_STATUS to active mission</span>
+                    <span class='form-check-label'>Log flight status (FLIGHT_STATUS / FLIGHT_STATE) to active mission</span>
                 </label>
             </div>
         </div>
