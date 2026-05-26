@@ -99,6 +99,8 @@ export class SkydioSseClient {
     private settings: SkydioSettings | null = null;
     private abortController: AbortController | null = null;
     private running = false;
+    /** Incremented on stop/start so orphaned connect loops exit instead of leaking SSE connections. */
+    private sessionId = 0;
     private backoffMs = INITIAL_BACKOFF_MS;
     private onAlert: AlertListener;
     private onStatus: SseStatusListener;
@@ -121,10 +123,12 @@ export class SkydioSseClient {
         this.running = true;
         this.backoffMs = INITIAL_BACKOFF_MS;
         this.emitStatus({ connected: false, reconnecting: true, lastEvent: this.lastEvent });
-        void this.connectLoop();
+        const session = this.sessionId;
+        void this.connectLoop(session);
     }
 
     stop(): void {
+        this.sessionId += 1;
         this.running = false;
         this.abortController?.abort();
         this.abortController = null;
@@ -135,32 +139,39 @@ export class SkydioSseClient {
         this.onStatus(partial);
     }
 
-    private async connectLoop(): Promise<void> {
-        while (this.running && this.settings) {
+    private isActiveSession(session: number): boolean {
+        return this.running && session === this.sessionId;
+    }
+
+    private async connectLoop(session: number): Promise<void> {
+        while (this.isActiveSession(session) && this.settings) {
             try {
-                await this.connectOnce(this.settings);
-                if (this.running) {
+                await this.connectOnce(this.settings, session);
+                if (this.isActiveSession(session)) {
                     this.emitStatus({ connected: false, reconnecting: true, lastEvent: this.lastEvent });
                 }
             } catch (err) {
-                if (!this.running) break;
+                if (!this.isActiveSession(session)) break;
                 this.onError(formatSseError(err));
                 this.emitStatus({ connected: false, reconnecting: true, lastEvent: this.lastEvent });
             }
 
-            if (!this.running) break;
+            if (!this.isActiveSession(session)) break;
 
             await sleep(this.backoffMs);
+            if (!this.isActiveSession(session)) break;
             this.backoffMs = Math.min(this.backoffMs * 2, MAX_BACKOFF_MS);
         }
     }
 
-    private async connectOnce(settings: SkydioSettings): Promise<void> {
+    private async connectOnce(settings: SkydioSettings, session: number): Promise<void> {
         const token = await fetchClientCredentialsToken({
             tokenUrl: settings.authentikTokenUrl,
             clientId: settings.oauthClientId,
             clientSecret: settings.oauthClientSecret,
         });
+
+        if (!this.isActiveSession(session)) return;
 
         const controller = new AbortController();
         this.abortController = controller;
@@ -182,10 +193,13 @@ export class SkydioSseClient {
             throw new Error('SSE response missing body');
         }
 
+        if (!this.isActiveSession(session)) return;
+
         this.backoffMs = INITIAL_BACKOFF_MS;
         this.emitStatus({ connected: true, reconnecting: false, lastEvent: this.lastEvent });
 
         await readSseStream(res.body, (eventType, data) => {
+            if (!this.isActiveSession(session)) return;
             void this.handleEventData(eventType, data, settings);
         }, controller.signal);
     }
