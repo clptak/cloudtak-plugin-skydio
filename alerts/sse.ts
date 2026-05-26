@@ -27,6 +27,25 @@ export interface SkydioSseClientOptions {
 const INITIAL_BACKOFF_MS = 1_000;
 const MAX_BACKOFF_MS = 30_000;
 
+function formatSseError(err: unknown): string {
+    if (!(err instanceof Error)) return 'SSE connection failed';
+
+    const message = err.message;
+    const isNetworkFailure = err instanceof TypeError
+        || /networkerror|failed to fetch|load failed/i.test(message);
+
+    if (isNetworkFailure) {
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'your CloudTAK origin';
+        return [
+            'SSE connection blocked by the browser (usually CORS).',
+            `Webhook server must allow ${origin} on GET /events/*.`,
+            'Redeploy clptak-webhook-server after updating CORS, then reload CloudTAK.',
+        ].join(' ');
+    }
+
+    return message;
+}
+
 function parseSseFrame(frame: string, onEvent: (eventType: string, data: string) => void): void {
     let eventType = 'message';
     const dataLines: string[] = [];
@@ -123,8 +142,7 @@ export class SkydioSseClient {
                 }
             } catch (err) {
                 if (!this.running) break;
-                const message = err instanceof Error ? err.message : 'SSE connection failed';
-                this.onError(message);
+                this.onError(formatSseError(err));
                 this.emitStatus({ connected: false, reconnecting: true, lastEvent: this.lastEvent });
             }
 
