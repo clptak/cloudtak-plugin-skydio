@@ -39,6 +39,7 @@
         <WebhooksTab
             v-else-if='activeTab === "webhooks"'
             :api-key='settings.apiKey'
+            :settings='settings'
         />
     </div>
 </template>
@@ -221,6 +222,7 @@ watch(
         settings.oauthClientSecret,
         settings.authentikTokenUrl,
         settings.skydioSseUrl,
+        settings.skydioWebhookUrl,
         settings.sseEnabled,
         settings.flightStatusLogEnabled,
     ],

@@ -26,5 +26,6 @@ export function mergeSkydioSettings(next: SkydioSettings, prior: SkydioSettings)
         oauthClientSecret: next.oauthClientSecret.trim() || prior.oauthClientSecret.trim(),
         authentikTokenUrl: next.authentikTokenUrl.trim(),
         skydioSseUrl: next.skydioSseUrl.trim(),
+        skydioWebhookUrl: next.skydioWebhookUrl.trim(),
     };
 }

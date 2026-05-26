@@ -9,14 +9,11 @@ Copy or symlink this repository into CloudTAK's `api/web/plugins/skydio/` before
 ## Prerequisites
 
 1. **Plugin Proxy** enabled in CloudTAK Admin → Plugin Proxy.
-2. Whitelist these hosts:
-   - `https://api.skydio.com` — Skydio Cloud API (vehicles, flights, webhooks)
-   - `https://users.ccsosar.net` — Authentik token endpoint (OAuth client_credentials)
-   - `https://webhook.ccsosar.net` — webhook server SSE stream
+2. Whitelist the hosts you configure in Settings (Skydio API, Authentik token URL, webhook SSE URL, and webhook POST URL).
 3. Skydio Cloud API token entered in the plugin Settings tab.
-4. Authentik **webhook-sse** OAuth2 client ID + secret for real-time alerts (Settings → Webhook SSE).
-5. Skydio webhook registered to `https://webhook.ccsosar.net/api/skydio` (Webhooks tab).
-6. **CORS** on webhook server `/events/*` for your CloudTAK origin (production: `https://cloudtak.ccsosar.net`; local dev: `http://localhost:8080`). Deploy `WebMvcConfig.kt` in clptak-webhook-server and reload the tak-stack Caddyfile.
+4. Authentik **webhook-sse** OAuth2 client ID + secret, Authentik token URL, SSE URL, and webhook URL entered in Settings → Webhook SSE.
+5. Skydio webhook registered to your configured webhook URL (Webhooks tab).
+6. **CORS** on webhook server `/events/*` for your CloudTAK origin (local dev: `http://localhost:8080`). Deploy `WebMvcConfig.kt` in your webhook server and reload your reverse proxy.
 
 ### Local dev (localhost:8080)
 
@@ -29,7 +26,7 @@ SSE cannot use the Plugin Proxy (long-lived stream). From local CloudTAK dev, ei
 server: {
   proxy: {
     '/webhook-sse': {
-      target: 'https://webhook.ccsosar.net',
+      target: 'https://webhook.example.com', // your webhook server origin
       changeOrigin: true,
       rewrite: (path) => path.replace(/^\/webhook-sse/, ''),
     },
@@ -48,7 +45,7 @@ The plugin automatically uses `http://localhost:8080/webhook-sse/events/skydio` 
 | Inbound Skydio POST to plugin | No (browser cannot receive HTTP) | No | No |
 | DataSync log on FLIGHT_STATUS / FLIGHT_STATE | Yes (active mission) | No | Optional |
 
-**Primary path:** Skydio POST → `webhook.ccsosar.net/api/skydio` → SSE `GET /events/skydio` → plugin Alerts tab (+ optional mission log).
+**Primary path:** Skydio POST → your webhook URL → SSE stream URL from Settings → plugin Alerts tab (+ optional mission log).
 
 **Fallback:** When OAuth/SSE credentials are absent, the plugin can poll the Skydio API for state changes (requires API key only).
 

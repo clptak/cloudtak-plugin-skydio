@@ -98,22 +98,20 @@ export interface SkydioSettings {
     oauthClientId: string;
     oauthClientSecret: string;
     skydioSseUrl: string;
+    skydioWebhookUrl: string;
     sseEnabled: boolean;
     flightStatusLogEnabled: boolean;
 }
-
-export const DEFAULT_AUTHENTIK_TOKEN_URL = 'https://users.ccsosar.net/application/o/token/';
-export const DEFAULT_SKYDIO_SSE_URL = 'https://webhook.ccsosar.net/events/skydio';
-export const DEFAULT_SKYDIO_WEBHOOK_URL = 'https://webhook.ccsosar.net/api/skydio';
 
 export const DEFAULT_SETTINGS: SkydioSettings = {
     apiKey: '',
     pollIntervalMs: 30_000,
     pollingEnabled: true,
-    authentikTokenUrl: DEFAULT_AUTHENTIK_TOKEN_URL,
+    authentikTokenUrl: '',
     oauthClientId: '',
     oauthClientSecret: '',
-    skydioSseUrl: DEFAULT_SKYDIO_SSE_URL,
+    skydioSseUrl: '',
+    skydioWebhookUrl: '',
     sseEnabled: true,
     flightStatusLogEnabled: true,
 };

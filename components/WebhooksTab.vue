@@ -19,10 +19,17 @@
 
         <template v-else>
             <div
-                v-if='showCreatePrompt'
+                v-if='!configuredWebhookUrl'
+                class='alert alert-warning'
+            >
+                Set Skydio Webhook URL in Settings before registering webhooks.
+            </div>
+
+            <div
+                v-else-if='showCreatePrompt'
                 class='alert alert-info'
             >
-                No webhook points at {{ defaultWebhookUrl }}.
+                No webhook points at {{ configuredWebhookUrl }}.
                 <button
                     type='button'
                     class='btn btn-sm btn-primary ms-2'
@@ -50,8 +57,8 @@
                         v-model='form.url'
                         class='mt-3'
                         label='URL'
-                        placeholder='https://webhook.ccsosar.net/api/skydio'
-                        description='Register this URL in Skydio so events reach the webhook server and SSE stream.'
+                        placeholder='https://webhook.example.com/api/skydio'
+                        description='Register this URL in Skydio so events reach your webhook server and SSE stream.'
                     />
 
                     <div class='d-flex align-items-center mt-3'>
@@ -138,14 +145,14 @@ import { computed, ref, reactive, watch, onMounted } from 'vue';
 import { TablerInput, TablerLoading, TablerAlert } from '@tak-ps/vue-tabler';
 import { createWebhook, listWebhooks } from '../api/client';
 import { ProxyError } from '../api/proxy';
-import { DEFAULT_SKYDIO_WEBHOOK_URL } from '../types';
-import type { SkydioWebhook } from '../types';
+import type { SkydioSettings, SkydioWebhook } from '../types';
 
 const props = defineProps<{
     apiKey: string;
+    settings: SkydioSettings;
 }>();
 
-const defaultWebhookUrl = DEFAULT_SKYDIO_WEBHOOK_URL;
+const configuredWebhookUrl = computed(() => props.settings.skydioWebhookUrl.trim());
 const webhooks = ref<SkydioWebhook[]>([]);
 const loaded = ref(false);
 const loading = ref(false);
@@ -153,16 +160,24 @@ const error = ref<Error | undefined>();
 const success = ref<string | null>(null);
 const form = reactive({
     name: 'CloudTAK webhook',
-    url: DEFAULT_SKYDIO_WEBHOOK_URL,
+    url: '',
 });
 
 const canCreate = computed(() => Boolean(form.name.trim() && form.url.trim()));
 
 const showCreatePrompt = computed(() => (
-    loaded.value
+    Boolean(configuredWebhookUrl.value)
+    && loaded.value
     && !loading.value
-    && !webhooks.value.some((wh) => wh.url === defaultWebhookUrl)
+    && !webhooks.value.some((wh) => wh.url === configuredWebhookUrl.value)
 ));
+
+function syncFormFromSettings(): void {
+    const url = configuredWebhookUrl.value;
+    if (url) form.url = url;
+}
+
+watch(() => props.settings.skydioWebhookUrl, syncFormFromSettings, { immediate: true });
 
 function toError(err: unknown, fallback: string): Error {
     if (err instanceof ProxyError || err instanceof Error) {
@@ -207,8 +222,9 @@ async function create(): Promise<void> {
 }
 
 async function createDefault(): Promise<void> {
+    if (!configuredWebhookUrl.value) return;
     form.name = 'CloudTAK webhook';
-    form.url = defaultWebhookUrl;
+    form.url = configuredWebhookUrl.value;
     await create();
 }
 

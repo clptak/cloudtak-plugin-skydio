@@ -16,7 +16,7 @@ export class ProxyError extends Error {
 
 function proxyHint(status: number, message: string): string {
     if (status === 403 && /proxy/i.test(message)) {
-        return `${message} Enable Plugin Proxy in CloudTAK Admin and whitelist https://api.skydio.com, https://users.ccsosar.net, and https://webhook.ccsosar.net.`;
+        return `${message} Enable Plugin Proxy in CloudTAK Admin and whitelist the Skydio API, Authentik token, and webhook server URLs configured in Settings.`;
     }
     if (status === 401) {
         return `${message} Confirm your Skydio API token in Settings.`;

@@ -12,7 +12,7 @@
                     label='API Key'
                     type='password'
                     placeholder='Skydio Cloud API token'
-                    description='Used for vehicles, flights, telemetry, and webhook registration. Stored per CloudTAK user in this browser. Requires Plugin Proxy with https://api.skydio.com whitelisted.'
+                    description='Used for vehicles, flights, telemetry, and webhook registration. Stored per CloudTAK user in this browser. Requires Plugin Proxy with the Skydio Cloud API (api.skydio.com) whitelisted.'
                 />
 
                 <div class='d-flex align-items-center mt-3'>
@@ -43,8 +43,8 @@
                 <TablerInput
                     v-model='local.authentikTokenUrl'
                     label='Authentik Token URL'
-                    placeholder='https://users.ccsosar.net/application/o/token/'
-                    description='OAuth2 token endpoint for client_credentials grant.'
+                    placeholder='https://auth.example.com/application/o/token/'
+                    description='OAuth2 token endpoint for client_credentials grant. Whitelist this host in Plugin Proxy.'
                 />
                 <TablerInput
                     v-model='local.oauthClientId'
@@ -64,8 +64,15 @@
                     v-model='local.skydioSseUrl'
                     class='mt-3'
                     label='Skydio SSE URL'
-                    placeholder='https://webhook.ccsosar.net/events/skydio'
-                    description='Requires Plugin Proxy whitelist for https://webhook.ccsosar.net and CORS on the webhook server.'
+                    placeholder='https://webhook.example.com/events/skydio'
+                    description='Full URL of your webhook server SSE stream. Whitelist this host in Plugin Proxy and allow CORS from your CloudTAK origin.'
+                />
+                <TablerInput
+                    v-model='local.skydioWebhookUrl'
+                    class='mt-3'
+                    label='Skydio Webhook URL'
+                    placeholder='https://webhook.example.com/api/skydio'
+                    description='URL Skydio Cloud should POST alerts to (used on the Webhooks tab). Whitelist this host in Plugin Proxy.'
                 />
 
                 <label class='form-check mt-3'>
@@ -143,7 +150,8 @@ const canSaveSse = computed(() => Boolean(
     local.authentikTokenUrl.trim()
     && local.oauthClientId.trim()
     && effectiveSecret()
-    && local.skydioSseUrl.trim(),
+    && local.skydioSseUrl.trim()
+    && local.skydioWebhookUrl.trim(),
 ));
 
 const canTestSse = computed(() => canSaveSse.value);
