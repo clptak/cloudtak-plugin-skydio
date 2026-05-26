@@ -56,7 +56,7 @@ import AlertsTab from './AlertsTab.vue';
 import WebhooksTab from './WebhooksTab.vue';
 import { listVehicles } from '../api/client';
 import { ProxyError } from '../api/proxy';
-import { loadSettings, saveSettings } from '../storage/settings';
+import { loadSettings, saveSettings, mergeSkydioSettings } from '../storage/settings';
 import { loadVehicles, saveVehicles } from '../storage/vehicles';
 import { getCurrentUserId } from '../storage/user';
 import { AlertPoller } from '../alerts/polling';
@@ -171,14 +171,7 @@ async function refreshVehicles(): Promise<void> {
 }
 
 function onSaveSettings(next: SkydioSettings): void {
-    const normalized = {
-        ...next,
-        apiKey: next.apiKey.trim(),
-        oauthClientId: next.oauthClientId.trim(),
-        oauthClientSecret: next.oauthClientSecret.trim(),
-        authentikTokenUrl: next.authentikTokenUrl.trim(),
-        skydioSseUrl: next.skydioSseUrl.trim(),
-    };
+    const normalized = mergeSkydioSettings(next, settings);
     Object.assign(settings, normalized);
     saveSettings(normalized);
     applyAlerts();

@@ -6,22 +6,14 @@ export interface OAuthTokenResponse {
     token_type: string;
 }
 
-function buildTokenBody(clientId: string, clientSecret: string): string {
+function buildTokenBody(clientId: string, clientSecret: string, scope?: string): string {
     const params = new URLSearchParams({
         grant_type: 'client_credentials',
         client_id: clientId,
         client_secret: clientSecret,
-        scope: 'openid',
     });
+    if (scope) params.set('scope', scope);
     return params.toString();
-}
-
-function isCorsOrNetworkError(err: unknown): boolean {
-    if (!(err instanceof TypeError)) return false;
-    const message = err.message.toLowerCase();
-    return message.includes('failed to fetch')
-        || message.includes('network')
-        || message.includes('cors');
 }
 
 function parseOAuthTokenPayload(
@@ -94,6 +86,33 @@ async function fetchTokenViaProxy(tokenUrl: string, body: string): Promise<OAuth
     );
 }
 
+async function requestToken(
+    tokenUrl: string,
+    clientId: string,
+    clientSecret: string,
+): Promise<OAuthTokenResponse> {
+    const scopes: Array<string | undefined> = ['openid', undefined];
+    let lastError: Error | undefined;
+
+    for (const scope of scopes) {
+        const body = buildTokenBody(clientId, clientSecret, scope);
+        try {
+            if (localStorage.token) {
+                return await fetchTokenViaProxy(tokenUrl, body);
+            }
+            return await fetchTokenDirect(tokenUrl, body);
+        } catch (err) {
+            if (err instanceof ProxyError) throw err;
+            lastError = err instanceof Error ? err : new Error('Authentik token request failed');
+            if (!lastError.message.includes('invalid_grant') || scope === undefined) {
+                throw lastError;
+            }
+        }
+    }
+
+    throw lastError ?? new Error('Authentik token request failed');
+}
+
 export async function fetchClientCredentialsToken(opts: {
     tokenUrl: string;
     clientId: string;
@@ -102,24 +121,10 @@ export async function fetchClientCredentialsToken(opts: {
     const tokenUrl = opts.tokenUrl.trim();
     const clientId = opts.clientId.trim();
     const clientSecret = opts.clientSecret.trim();
-    const body = buildTokenBody(clientId, clientSecret);
 
-    // Prefer CloudTAK Plugin Proxy — Authentik token POST is blocked by browser CORS.
-    if (localStorage.token) {
-        try {
-            return await fetchTokenViaProxy(tokenUrl, body);
-        } catch (err) {
-            if (err instanceof ProxyError) throw err;
-            // Fall through to direct fetch for non-proxy environments.
-        }
+    if (!clientId || !clientSecret) {
+        throw new Error('Authentik Client ID and Client Secret are required');
     }
 
-    try {
-        return await fetchTokenDirect(tokenUrl, body);
-    } catch (err) {
-        if (isCorsOrNetworkError(err)) {
-            return fetchTokenViaProxy(tokenUrl, body);
-        }
-        throw err instanceof Error ? err : new Error('Authentik token request failed');
-    }
+    return requestToken(tokenUrl, clientId, clientSecret);
 }

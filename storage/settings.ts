@@ -16,3 +16,15 @@ export function loadSettings(): SkydioSettings {
 export function saveSettings(settings: SkydioSettings): void {
     localStorage.setItem(settingsStorageKey(), JSON.stringify(settings));
 }
+
+/** Keep the saved client secret when password inputs are left blank on save. */
+export function mergeSkydioSettings(next: SkydioSettings, prior: SkydioSettings): SkydioSettings {
+    return {
+        ...next,
+        apiKey: next.apiKey.trim(),
+        oauthClientId: next.oauthClientId.trim(),
+        oauthClientSecret: next.oauthClientSecret.trim() || prior.oauthClientSecret.trim(),
+        authentikTokenUrl: next.authentikTokenUrl.trim(),
+        skydioSseUrl: next.skydioSseUrl.trim(),
+    };
+}

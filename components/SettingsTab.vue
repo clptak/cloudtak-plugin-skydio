@@ -58,6 +58,7 @@
                     label="Client Secret"
                     type="password"
                     placeholder="Authentik OAuth2 client secret"
+                    description="Leave blank to keep the saved secret. Re-enter and save after rotating credentials in Authentik."
                 />
                 <TablerInput
                     v-model="local.skydioSseUrl"
@@ -76,7 +77,7 @@
                     <span class="form-check-label">Enable webhook SSE alerts</span>
                 </label>
 
-                <div class="d-flex align-items-center mt-3">
+                <div class="d-flex align-items-center gap-2 mt-3">
                     <button
                         type="button"
                         class="btn btn-primary"
@@ -85,6 +86,22 @@
                     >
                         Save Webhook SSE Settings
                     </button>
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        :disabled="!canTestSse || testing"
+                        @click="testConnection"
+                    >
+                        {{ testing ? 'Testing…' : 'Test Authentik Token' }}
+                    </button>
+                </div>
+
+                <div
+                    v-if="testResult"
+                    class="alert mt-3"
+                    :class="testResult.ok ? 'alert-success' : 'alert-danger'"
+                >
+                    {{ testResult.message }}
                 </div>
             </div>
         </div>
@@ -101,6 +118,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { TablerInput } from '@tak-ps/vue-tabler';
+import { fetchClientCredentialsToken } from '../api/authentik';
+import { mergeSkydioSettings } from '../storage/settings';
 import type { SkydioSettings } from '../types';
 
 const props = defineProps<{
@@ -113,13 +132,21 @@ const emit = defineEmits<{
 
 const local = reactive<SkydioSettings>({ ...props.settings });
 const saved = ref(false);
+const testing = ref(false);
+const testResult = ref<{ ok: boolean; message: string } | null>(null);
+
+function effectiveSecret(): string {
+    return local.oauthClientSecret.trim() || props.settings.oauthClientSecret.trim();
+}
 
 const canSaveSse = computed(() => Boolean(
     local.authentikTokenUrl.trim()
     && local.oauthClientId.trim()
-    && local.oauthClientSecret.trim()
+    && effectiveSecret()
     && local.skydioSseUrl.trim(),
 ));
+
+const canTestSse = computed(() => canSaveSse.value);
 
 watch(
     () => props.settings,
@@ -129,22 +156,46 @@ watch(
     { deep: true },
 );
 
+function mergedLocal(): SkydioSettings {
+    return mergeSkydioSettings(local, props.settings);
+}
+
 function saveApiKey(): void {
-    emit('save', {
-        ...local,
-        apiKey: local.apiKey.trim(),
-    });
+    emit('save', mergedLocal());
     saved.value = true;
+    testResult.value = null;
 }
 
 function saveSse(): void {
-    emit('save', {
-        ...local,
-        authentikTokenUrl: local.authentikTokenUrl.trim(),
-        oauthClientId: local.oauthClientId.trim(),
-        oauthClientSecret: local.oauthClientSecret.trim(),
-        skydioSseUrl: local.skydioSseUrl.trim(),
-    });
+    emit('save', mergedLocal());
     saved.value = true;
+    testResult.value = null;
+}
+
+async function testConnection(): Promise<void> {
+    testing.value = true;
+    testResult.value = null;
+
+    const merged = mergedLocal();
+    emit('save', merged);
+
+    try {
+        const token = await fetchClientCredentialsToken({
+            tokenUrl: merged.authentikTokenUrl,
+            clientId: merged.oauthClientId,
+            clientSecret: merged.oauthClientSecret,
+        });
+        testResult.value = {
+            ok: true,
+            message: `Authentik token OK (${token.token_type}, expires in ${token.expires_in}s).`,
+        };
+    } catch (err) {
+        testResult.value = {
+            ok: false,
+            message: err instanceof Error ? err.message : 'Authentik token test failed',
+        };
+    } finally {
+        testing.value = false;
+    }
 }
 </script>
