@@ -191,6 +191,16 @@ const importing = ref(false);
 const error = ref<Error | undefined>();
 const downloadError = ref<Error | undefined>();
 const importError = ref<Error | undefined>();
+type NormalizedImportFeature = {
+    path?: string;
+    properties: {
+        creator?: {
+            callsign?: string;
+        };
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+};
 
 function toError(err: unknown, fallback: string): Error {
     if (err instanceof ProxyError || err instanceof Error) {
@@ -279,14 +289,14 @@ async function geoJsonCollectionToImportFeatures(
     const features: unknown[] = [];
 
     for (const feat of collection.features) {
-        const norm = await normalize_geojson(feat);
+        const norm = await normalize_geojson(feat) as NormalizedImportFeature;
         // Keep CloudTAK's GeoJSON import folder convention.
-        const creator = (norm as any)?.properties?.creator;
+        const creator = norm.properties.creator;
         features.push({
             ...norm,
             path: `/${folderName}/`,
             properties: {
-                ...(norm as any).properties,
+                ...norm.properties,
                 creator: creator ? { ...creator, callsign: creator.callsign ?? '' } : undefined,
             },
         });
@@ -305,7 +315,7 @@ async function importTelemetryToMap(): Promise<void> {
     let successCount = 0;
 
     // CloudTAK map store drives the GeoJSON import modal.
-    const mapStore = useMapStore() as any;
+    const mapStore = useMapStore();
 
     try {
         const allImportFeatures: unknown[] = [];

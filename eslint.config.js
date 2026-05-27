@@ -33,4 +33,12 @@ export default ts.config(
             'vue/require-v-for-key': 0,
         },
     },
+    {
+        files: ['relay-server/**/*.js'],
+        languageOptions: {
+            globals: {
+                ...globals.node,
+            },
+        },
+    },
 );

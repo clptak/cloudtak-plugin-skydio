@@ -145,7 +145,7 @@ async function getFlightTelemetryViaRelay(
     let payload: unknown;
     try {
         payload = await res.json();
-    } catch (err) {
+    } catch {
         throw new ProxyError(`Telemetry relay returned non-JSON response (${res.status})`, res.status);
     }
 

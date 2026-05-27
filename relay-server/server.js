@@ -75,7 +75,6 @@ app.get('/skydio/telemetry/:flightId', async (req, res) => {
 app.options('*', corsMiddleware);
 
 app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
   console.log(`Skydio telemetry relay listening on :${PORT}`);
 });
 
