@@ -1,0 +1,15 @@
+{
+  "name": "cloudtak-skydio-telemetry-relay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Reference relay server to fetch Skydio flight telemetry and serve it to a CloudTAK plugin without CloudTAK proxy response limits.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}
+

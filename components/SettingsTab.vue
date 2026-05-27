@@ -68,6 +68,13 @@
                     description='Full URL of your webhook server SSE stream. Whitelist this host in Plugin Proxy and allow CORS from your CloudTAK origin.'
                 />
                 <TablerInput
+                    v-model='local.skydioTelemetryRelayUrl'
+                    class='mt-3'
+                    label='Skydio Telemetry Relay URL'
+                    placeholder='https://webhook.example.com/events/skydio'
+                    description='Optional parent URL for telemetry relay. Relay should expose GET {url}/telemetry/{flightId}. When set, large-flight telemetry downloads use the relay instead of the 1MB Plugin Proxy response limit.'
+                />
+                <TablerInput
                     v-model='local.skydioWebhookUrl'
                     class='mt-3'
                     label='Skydio Webhook URL'

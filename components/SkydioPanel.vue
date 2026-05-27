@@ -9,6 +9,7 @@
             v-if='activeTab === "flights"'
             :api-key='settings.apiKey'
             :vehicles='vehicles'
+            :telemetry-relay-url='settings.skydioTelemetryRelayUrl'
         />
         <MissionPlanningTab v-else-if='activeTab === "missions"' />
         <VehiclesTab

@@ -95,7 +95,24 @@ export async function listFlights(
     return merged.sort((a, b) => String(b.takeoff ?? '').localeCompare(String(a.takeoff ?? '')));
 }
 
-export async function getFlightTelemetry(
+function telemetryRelayEndpoint(relayBaseUrl: string, flightId: string): string {
+    const base = relayBaseUrl.trim().replace(/\/+$/, '');
+    const encodedFlightId = encodeURIComponent(flightId);
+
+    // Expected:
+    //   base = https://webhook.example.com/events/skydio
+    //   => GET {base}/telemetry/{flightId}
+    //
+    // Also allow:
+    //   base = https://webhook.example.com/skydio/telemetry
+    //   => GET {base}/{flightId}
+    if (base.endsWith('/telemetry')) {
+        return `${base}/${encodedFlightId}`;
+    }
+    return `${base}/telemetry/${encodedFlightId}`;
+}
+
+async function getFlightTelemetryViaProxy(
     apiKey: string,
     flightId: string,
 ): Promise<SkydioFlightTelemetryResponse> {
@@ -105,6 +122,55 @@ export async function getFlightTelemetry(
         headers: authHeaders(apiKey),
     });
     return assertOk(res);
+}
+
+async function getFlightTelemetryViaRelay(
+    relayBaseUrl: string,
+    apiKey: string,
+    flightId: string,
+): Promise<SkydioFlightTelemetryResponse> {
+    const url = telemetryRelayEndpoint(relayBaseUrl, flightId);
+
+    let res: Response;
+    try {
+        res = await fetch(url, {
+            method: 'GET',
+            headers: authHeaders(apiKey),
+        });
+    } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        throw new ProxyError(`Telemetry relay request failed: ${message}`, 0);
+    }
+
+    let payload: unknown;
+    try {
+        payload = await res.json();
+    } catch (err) {
+        throw new ProxyError(`Telemetry relay returned non-JSON response (${res.status})`, res.status);
+    }
+
+    // Reuse the same validation as the proxy path.
+    return assertOk({ status: res.status, body: payload as SkydioApiResponse<unknown> }) as SkydioFlightTelemetryResponse;
+}
+
+export async function getFlightTelemetry(
+    apiKey: string,
+    flightId: string,
+    opts?: {
+        telemetryRelayUrl?: string;
+    },
+): Promise<SkydioFlightTelemetryResponse> {
+    const relayUrl = opts?.telemetryRelayUrl?.trim();
+
+    if (relayUrl) {
+        try {
+            return await getFlightTelemetryViaRelay(relayUrl, apiKey, flightId);
+        } catch {
+            // If relay fails (misconfiguration, CORS, etc.) fall back to the existing proxy path.
+        }
+    }
+
+    return getFlightTelemetryViaProxy(apiKey, flightId);
 }
 
 export async function listWebhooks(apiKey: string): Promise<SkydioWebhook[]> {

@@ -100,6 +100,13 @@ export interface SkydioSettings {
     oauthClientId: string;
     oauthClientSecret: string;
     skydioSseUrl: string;
+    /**
+     * Optional telemetry relay base URL. The relay is expected to expose:
+     *   GET {skydioTelemetryRelayUrl}/telemetry/{flightId}
+     * For local dev the plugin will attempt to rewrite this URL through the existing
+     * /webhook-sse Vite dev proxy when the path starts with /events/.
+     */
+    skydioTelemetryRelayUrl: string;
     skydioWebhookUrl: string;
     sseEnabled: boolean;
     flightStatusLogEnabled: boolean;
@@ -113,6 +120,7 @@ export const DEFAULT_SETTINGS: SkydioSettings = {
     oauthClientId: '',
     oauthClientSecret: '',
     skydioSseUrl: '',
+    skydioTelemetryRelayUrl: '',
     skydioWebhookUrl: '',
     sseEnabled: true,
     flightStatusLogEnabled: true,

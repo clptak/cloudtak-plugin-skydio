@@ -36,6 +36,30 @@ server: {
 
 The plugin automatically uses `http://localhost:8080/webhook-sse/events/skydio` when running on localhost.
 
+## Telemetry Relay (bypass Plugin Proxy 1MB limit)
+
+The Plugin Proxy enforces a hard response size limit (~1MB). For long flights, Skydio's `/telemetry` payload can exceed that limit, causing the `Get Flights → Download Telemetry` action to fail.
+
+To avoid this, configure an optional **Skydio Telemetry Relay URL** in the plugin Settings. Provide the *parent* URL where your webhook server exposes:
+
+- `GET {Skydio Telemetry Relay URL}/telemetry/{flightId}`
+
+The relay server must also:
+
+- Allow CORS from your CloudTAK UI origin (similar to SSE).
+- Accept `Authorization: <SKYDIO_API_TOKEN>` and forward it to `https://api.skydio.com/api/v1/flight/{flight_id}/telemetry` server-side.
+
+This repo includes a reference relay implementation under [`relay-server/`](relay-server/README.md).
+
+### Local dev (localhost:8080)
+
+When your relay URL points at a webhook-server path under `/events/`, the plugin rewrites it through the existing Vite dev proxy at `/webhook-sse/*` (same proxy setup as SSE). If you mount telemetry at `/events/skydio/telemetry/:flightId`, you can reuse the existing Vite proxy config.
+
+### If you cannot use a relay
+
+- Fetch telemetry outside CloudTAK (curl/Postman), convert it to `.geojson`, and use CloudTAK's GeoJSON import UI to add it to the map.
+- If you control and can modify CloudTAK, you can increase the proxy response limit by updating `RESPONSE_BODY_LIMIT` in CloudTAK's `api/routes/proxy.ts` and redeploying the CloudTAK API.
+
 ## Alerts and webhooks
 
 | Feature | Docker Compose + webhook server | Polling fallback | AWS ETL bridge |
