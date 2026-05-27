@@ -8,7 +8,7 @@ export default ts.config(
     ...ts.configs.recommended,
     ...eslintPluginVue.configs['flat/recommended'],
     {
-        ignores: ['stubs/**', 'node_modules/**'],
+        ignores: ['stubs/**', 'node_modules/**', 'relay-server/**'],
     },
     {
         languageOptions: {
@@ -31,14 +31,6 @@ export default ts.config(
             'vue/no-multiple-template-root': 0,
             'vue/no-v-model-argument': 0,
             'vue/require-v-for-key': 0,
-        },
-    },
-    {
-        files: ['relay-server/**/*.js'],
-        languageOptions: {
-            globals: {
-                ...globals.node,
-            },
         },
     },
 );
