@@ -125,8 +125,8 @@
                 </div>
 
                 <p class='form-hint mt-2'>
-                    Downloads one GeoJSON file per selected flight. If you configured a Skydio Telemetry Relay URL
-                    in Settings, large flights may be fetched via the relay (avoiding the Plugin Proxy 1MB response limit).
+                    Large flights use your webhook telemetry relay (Settings → Telemetry Relay URL, or the same base as Skydio SSE URL).
+                    The relay must expose GET {base}/telemetry/{flightId} with CORS for this CloudTAK site — see relay-server/ in the plugin repo.
                 </p>
 
                 <TablerLoading
@@ -179,7 +179,20 @@ const props = defineProps<{
     apiKey: string;
     vehicles: SkydioVehicle[];
     telemetryRelayUrl: string;
+    skydioSseUrl: string;
 }>();
+
+function effectiveTelemetryRelayUrl(): string {
+    return resolveSkydioTelemetryRelayUrl(props.telemetryRelayUrl, props.skydioSseUrl);
+}
+
+function telemetryFetchOpts(): { telemetryRelayUrl: string; requireRelay: boolean } {
+    const relayUrl = effectiveTelemetryRelayUrl();
+    return {
+        telemetryRelayUrl: relayUrl,
+        requireRelay: Boolean(relayUrl),
+    };
+}
 
 const selectedSerials = ref<string[]>([]);
 const takeoffSince = ref('');
@@ -251,7 +264,7 @@ async function downloadTelemetry(): Promise<void> {
                 const telemetry = await getFlightTelemetry(
                     props.apiKey,
                     flightId,
-                    { telemetryRelayUrl: resolveSkydioTelemetryRelayUrl(props.telemetryRelayUrl) },
+                    telemetryFetchOpts(),
                 );
                 const collection = telemetryToGeoJson(telemetry);
                 downloadGeoJson(collection, `skydio-telemetry-${sanitizeFilename(label)}.geojson`);
@@ -321,7 +334,7 @@ async function importTelemetryToMap(): Promise<void> {
                 const telemetry = await getFlightTelemetry(
                     props.apiKey,
                     flightId,
-                    { telemetryRelayUrl: resolveSkydioTelemetryRelayUrl(props.telemetryRelayUrl) },
+                    telemetryFetchOpts(),
                 );
                 const collection = telemetryToGeoJson(telemetry);
                 const importFeatures = await geoJsonCollectionToImportFeatures(collection, folderName);

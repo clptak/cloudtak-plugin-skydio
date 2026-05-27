@@ -10,6 +10,7 @@
             :api-key='settings.apiKey'
             :vehicles='vehicles'
             :telemetry-relay-url='settings.skydioTelemetryRelayUrl'
+            :skydio-sse-url='settings.skydioSseUrl'
         />
         <MissionPlanningTab v-else-if='activeTab === "missions"' />
         <VehiclesTab

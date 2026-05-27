@@ -68,8 +68,8 @@ export async function proxyRequest<T = unknown>(opts: {
         if (/1\s*MB limit/i.test(message)) {
             message = [
                 'CloudTAK Plugin Proxy limits responses to 1MB (server-side, not this plugin).',
-                'Full-flight Skydio telemetry often exceeds that limit.',
-                'Try one shorter flight at a time, or fetch telemetry outside CloudTAK.',
+                'Configure Skydio Telemetry Relay URL in Settings (or Skydio SSE URL — the plugin derives the relay base from it),',
+                'deploy GET {base}/telemetry/{flightId} on your webhook server with CORS for this CloudTAK origin, then retry.',
             ].join(' ');
         }
         throw new ProxyError(proxyHint(res.status, message), res.status);

@@ -158,6 +158,8 @@ export async function getFlightTelemetry(
     flightId: string,
     opts?: {
         telemetryRelayUrl?: string;
+        /** When true, do not fall back to Plugin Proxy if the relay request fails. */
+        requireRelay?: boolean;
     },
 ): Promise<SkydioFlightTelemetryResponse> {
     const relayUrl = opts?.telemetryRelayUrl?.trim();
@@ -165,8 +167,19 @@ export async function getFlightTelemetry(
     if (relayUrl) {
         try {
             return await getFlightTelemetryViaRelay(relayUrl, apiKey, flightId);
-        } catch {
-            // If relay fails (misconfiguration, CORS, etc.) fall back to the existing proxy path.
+        } catch (err) {
+            const relayMessage = err instanceof Error ? err.message : 'Telemetry relay failed';
+            if (opts?.requireRelay) {
+                throw new ProxyError(
+                    [
+                        relayMessage,
+                        `Relay URL used: ${telemetryRelayEndpoint(relayUrl, flightId)}`,
+                        'Deploy GET {relay-base}/telemetry/{flightId} on your webhook server (see relay-server/ in the plugin repo) and allow CORS from your CloudTAK origin.',
+                        'Plugin Proxy is not used for telemetry when a relay URL is configured.',
+                    ].join(' '),
+                    err instanceof ProxyError ? err.status : 0,
+                );
+            }
         }
     }
 

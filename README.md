@@ -49,7 +49,16 @@ The relay server must also:
 - Allow CORS from your CloudTAK UI origin (similar to SSE).
 - Accept `Authorization: <SKYDIO_API_TOKEN>` and forward it to `https://api.skydio.com/api/v1/flight/{flight_id}/telemetry` server-side.
 
-This repo includes a reference relay implementation under [`relay-server/`](relay-server/README.md).
+This repo includes a reference relay implementation under [`relay-server/`](relay-server/README.md). **The relay is not automatic** — you must add the route to your webhook server (or run the reference server) and allow CORS from your CloudTAK origin (e.g. `https://cloudtak.ccsosar.net`).
+
+If **Skydio Telemetry Relay URL** is empty but **Skydio SSE URL** is set (e.g. `https://webhook.example.com/events/skydio`), the plugin uses that same base for telemetry: `GET https://webhook.example.com/events/skydio/telemetry/{flightId}`.
+
+### Troubleshooting 1MB proxy errors
+
+1. Confirm Settings → **Skydio SSE URL** or **Skydio Telemetry Relay URL** is saved.
+2. From your browser (logged into CloudTAK), open DevTools → Network and retry Import to Map. You should see a request to your **webhook host**, not `/api/proxy`.
+3. If you still see `/api/proxy`, the relay URL is missing or the relay request failed earlier (older plugin builds silently fell back to the proxy).
+4. Deploy `GET /events/skydio/telemetry/:flightId` on the webhook server and set `CORS_ORIGINS` to include `https://cloudtak.ccsosar.net` (or your CloudTAK UI origin).
 
 ### Local dev (localhost:8080)
 

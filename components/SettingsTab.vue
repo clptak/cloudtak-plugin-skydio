@@ -72,7 +72,7 @@
                     class='mt-3'
                     label='Skydio Telemetry Relay URL'
                     placeholder='https://webhook.example.com/events/skydio'
-                    description='Optional parent URL for telemetry relay. Relay should expose GET {url}/telemetry/{flightId}. When set, large-flight telemetry downloads use the relay instead of the 1MB Plugin Proxy response limit.'
+                    description='Optional. If empty, the plugin uses your Skydio SSE URL base (e.g. https://webhook.example.com/events/skydio). Your webhook server must expose GET {base}/telemetry/{flightId} with CORS for this CloudTAK origin.'
                 />
                 <TablerInput
                     v-model='local.skydioWebhookUrl'
