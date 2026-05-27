@@ -11,7 +11,8 @@
     "baseUrl": ".",
     "paths": {
       "../../../src/std.ts": ["stubs/std.ts"],
-      "../../../src/stores/map.ts": ["stubs/map-store.ts"]
+      "../../../src/stores/map.ts": ["stubs/map-store.ts"],
+      "../../../src/types.ts": ["stubs/types.ts"]
     }
   },
   "include": ["**/*.ts", "components/**/*.vue", "env.d.ts", "stubs/**/*.ts"],

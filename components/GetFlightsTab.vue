@@ -165,6 +165,7 @@ import { TablerInput, TablerLoading, TablerAlert } from '@tak-ps/vue-tabler';
 import { getFlightTelemetry, listFlights } from '../api/client';
 import { ProxyError } from '../api/proxy';
 import type { SkydioFlight, SkydioVehicle } from '../types';
+import type { Feature } from '../../../src/types.ts';
 import { useMapStore } from '../../../src/stores/map.ts';
 import { normalize_geojson } from '@tak-ps/node-cot/normalize_geojson';
 import { resolveSkydioTelemetryRelayUrl } from '../lib/sse-url';
@@ -191,16 +192,6 @@ const importing = ref(false);
 const error = ref<Error | undefined>();
 const downloadError = ref<Error | undefined>();
 const importError = ref<Error | undefined>();
-type NormalizedImportFeature = {
-    path?: string;
-    properties: {
-        creator?: {
-            callsign?: string;
-        };
-        [key: string]: unknown;
-    };
-    [key: string]: unknown;
-};
 
 function toError(err: unknown, fallback: string): Error {
     if (err instanceof ProxyError || err instanceof Error) {
@@ -285,18 +276,17 @@ async function downloadTelemetry(): Promise<void> {
 async function geoJsonCollectionToImportFeatures(
     collection: ReturnType<typeof telemetryToGeoJson>,
     folderName: string,
-): Promise<unknown[]> {
-    const features: unknown[] = [];
+): Promise<Feature[]> {
+    const features: Feature[] = [];
 
     for (const feat of collection.features) {
-        const norm = await normalize_geojson(feat) as NormalizedImportFeature;
-        // Keep CloudTAK's GeoJSON import folder convention.
-        const creator = norm.properties.creator;
+        const norm = await normalize_geojson(feat);
+        const creator = norm.properties.creator as Feature['properties']['creator'];
         features.push({
-            ...norm,
+            ...(norm as Feature),
             path: `/${folderName}/`,
             properties: {
-                ...norm.properties,
+                ...(norm.properties as Feature['properties']),
                 creator: creator ? { ...creator, callsign: creator.callsign ?? '' } : undefined,
             },
         });
@@ -318,7 +308,7 @@ async function importTelemetryToMap(): Promise<void> {
     const mapStore = useMapStore();
 
     try {
-        const allImportFeatures: unknown[] = [];
+        const allImportFeatures: Feature[] = [];
         for (const flightId of selectedFlightIds.value) {
             const flight = flights.value.find((item) => item.flight_id === flightId);
             const label = flight
