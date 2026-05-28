@@ -1,3 +1,5 @@
+import { getCloudTakToken } from '../storage/cloudtakToken';
+
 export interface ProxyResponse<T = unknown> {
     status: number;
     headers: Record<string, string>;
@@ -30,7 +32,7 @@ export async function proxyRequest<T = unknown>(opts: {
     headers?: Record<string, string>;
     body?: unknown;
 }): Promise<ProxyResponse<T>> {
-    const token = localStorage.token;
+    const token = getCloudTakToken();
     if (!token) {
         throw new ProxyError('Not authenticated — log in to CloudTAK first', 401);
     }
