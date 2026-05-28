@@ -106,6 +106,29 @@
                 </div>
 
                 <div class='mt-3'>
+                    <label class='form-label'>
+                        Import mode
+                    </label>
+                    <select
+                        v-model='importMode'
+                        class='form-select'
+                    >
+                        <option value='line'>
+                            Line route
+                        </option>
+                        <option value='points'>
+                            Points (full HAE per fix)
+                        </option>
+                        <option value='both'>
+                            Both line and points
+                        </option>
+                    </select>
+                    <div class='form-hint mt-1'>
+                        Use Points/Both to preserve per-fix altitude through Node-CoT import.
+                    </div>
+                </div>
+
+                <div class='mt-3'>
                     <button
                         type='button'
                         class='btn btn-primary'
@@ -173,6 +196,7 @@ import {
     downloadGeoJson,
     flightLabel,
     telemetryToGeoJson,
+    type TelemetryGeoJsonMode,
 } from '../utils/telemetryGeoJson';
 
 const props = defineProps<{
@@ -202,6 +226,7 @@ const selectedFlightIds = ref<string[]>([]);
 const loading = ref(false);
 const downloading = ref(false);
 const importing = ref(false);
+const importMode = ref<TelemetryGeoJsonMode>('line');
 const error = ref<Error | undefined>();
 const downloadError = ref<Error | undefined>();
 const importError = ref<Error | undefined>();
@@ -266,7 +291,7 @@ async function downloadTelemetry(): Promise<void> {
                     flightId,
                     telemetryFetchOpts(),
                 );
-                const collection = telemetryToGeoJson(telemetry);
+                const collection = telemetryToGeoJson(telemetry, importMode.value);
                 downloadGeoJson(collection, `skydio-telemetry-${sanitizeFilename(label)}.geojson`);
                 successCount += 1;
             } catch (err) {
@@ -336,7 +361,7 @@ async function importTelemetryToMap(): Promise<void> {
                     flightId,
                     telemetryFetchOpts(),
                 );
-                const collection = telemetryToGeoJson(telemetry);
+                const collection = telemetryToGeoJson(telemetry, importMode.value);
                 const importFeatures = await geoJsonCollectionToImportFeatures(collection, folderName);
                 allImportFeatures.push(...importFeatures);
                 successCount += 1;
