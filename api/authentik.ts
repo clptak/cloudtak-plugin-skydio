@@ -1,4 +1,4 @@
-import { getCloudTakToken } from '../storage/cloudtakToken';
+import { resolveCloudTakToken } from '../storage/cloudtakToken';
 import { proxyRequest, ProxyError } from './proxy';
 
 export interface OAuthTokenResponse {
@@ -98,7 +98,7 @@ async function requestToken(
     for (const scope of scopes) {
         const body = buildTokenBody(clientId, clientSecret, scope);
         try {
-            if (getCloudTakToken()) {
+            if (await resolveCloudTakToken()) {
                 return await fetchTokenViaProxy(tokenUrl, body);
             }
             return await fetchTokenDirect(tokenUrl, body);

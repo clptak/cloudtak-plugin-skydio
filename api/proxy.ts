@@ -1,4 +1,7 @@
-import { getCloudTakToken } from '../storage/cloudtakToken';
+import {
+    CloudTakAuthError,
+    requireCloudTakToken,
+} from '../storage/cloudtakToken';
 
 export interface ProxyResponse<T = unknown> {
     status: number;
@@ -21,6 +24,9 @@ function proxyHint(status: number, message: string): string {
         return `${message} Enable Plugin Proxy in CloudTAK Admin and whitelist the Skydio API, Authentik token, and webhook server URLs configured in Settings.`;
     }
     if (status === 401) {
+        if (/invalid token|no auth present|authentication required|not authenticated/i.test(message)) {
+            return `${message} Your CloudTAK session may be invalid — log out, sign in again with SSO, then retry.`;
+        }
         return `${message} Confirm your Skydio API token in Settings.`;
     }
     return message;
@@ -32,15 +38,21 @@ export async function proxyRequest<T = unknown>(opts: {
     headers?: Record<string, string>;
     body?: unknown;
 }): Promise<ProxyResponse<T>> {
-    const token = getCloudTakToken();
-    if (!token) {
-        throw new ProxyError('Not authenticated — log in to CloudTAK first', 401);
+    let token: string;
+    try {
+        token = await requireCloudTakToken();
+    } catch (err) {
+        const message = err instanceof CloudTakAuthError || err instanceof Error
+            ? err.message
+            : 'Not authenticated — log in to CloudTAK first';
+        throw new ProxyError(message, 401);
     }
 
     let res: Response;
     try {
         res = await fetch('/api/proxy', {
             method: 'POST',
+            credentials: 'same-origin',
             headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}`,
