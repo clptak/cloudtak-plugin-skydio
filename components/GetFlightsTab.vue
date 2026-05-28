@@ -107,6 +107,27 @@
 
                 <div class='mt-3'>
                     <label class='form-label'>
+                        Elevation (Z)
+                    </label>
+                    <select
+                        v-model='elevationSource'
+                        class='form-select'
+                    >
+                        <option value='height_above_takeoff'>
+                            Height above takeoff → MSL
+                        </option>
+                        <option value='gps_altitude'>
+                            GPS altitude (MSL)
+                        </option>
+                    </select>
+                    <div class='form-hint mt-1'>
+                        GeoJSON Z is always MSL meters. Takeoff→MSL uses takeoff GPS altitude plus
+                        height above takeoff (e.g. ~60 m AGL → ~1659 m MSL, not 60 m on the map).
+                    </div>
+                </div>
+
+                <div class='mt-3'>
+                    <label class='form-label'>
                         Import mode
                     </label>
                     <select
@@ -124,7 +145,7 @@
                         </option>
                     </select>
                     <div class='form-hint mt-1'>
-                        Use Points/Both to preserve per-fix altitude through Node-CoT import.
+                        Use Points/Both to preserve per-fix HAE through Node-CoT import.
                     </div>
                 </div>
 
@@ -196,6 +217,7 @@ import {
     downloadGeoJson,
     flightLabel,
     telemetryToGeoJson,
+    type TelemetryElevationSource,
     type TelemetryGeoJsonMode,
 } from '../utils/telemetryGeoJson';
 
@@ -227,6 +249,7 @@ const loading = ref(false);
 const downloading = ref(false);
 const importing = ref(false);
 const importMode = ref<TelemetryGeoJsonMode>('line');
+const elevationSource = ref<TelemetryElevationSource>('height_above_takeoff');
 const error = ref<Error | undefined>();
 const downloadError = ref<Error | undefined>();
 const importError = ref<Error | undefined>();
@@ -291,7 +314,11 @@ async function downloadTelemetry(): Promise<void> {
                     flightId,
                     telemetryFetchOpts(),
                 );
-                const collection = telemetryToGeoJson(telemetry, importMode.value);
+                const collection = telemetryToGeoJson(
+                    telemetry,
+                    importMode.value,
+                    elevationSource.value,
+                );
                 downloadGeoJson(collection, `skydio-telemetry-${sanitizeFilename(label)}.geojson`);
                 successCount += 1;
             } catch (err) {
@@ -361,7 +388,11 @@ async function importTelemetryToMap(): Promise<void> {
                     flightId,
                     telemetryFetchOpts(),
                 );
-                const collection = telemetryToGeoJson(telemetry, importMode.value);
+                const collection = telemetryToGeoJson(
+                    telemetry,
+                    importMode.value,
+                    elevationSource.value,
+                );
                 const importFeatures = await geoJsonCollectionToImportFeatures(collection, folderName);
                 allImportFeatures.push(...importFeatures);
                 successCount += 1;

@@ -1,4 +1,4 @@
-import type { SkydioFlightTelemetryResponse } from '../types';
+import type { SkydioFlightTelemetryResponse, SkydioTelemetryPoint } from '../types';
 
 export function formatTakeoff(takeoff: string | undefined): string {
     if (!takeoff) return '';
@@ -13,6 +13,12 @@ export function flightLabel(vehicleSerial: string, takeoff: string | undefined):
 type GeoJsonPosition = [number, number, number];
 
 export type TelemetryGeoJsonMode = 'line' | 'points' | 'both';
+
+/**
+ * height_above_takeoff: AGL from Skydio, converted to MSL for GeoJSON Z.
+ * gps_altitude: Skydio GPS MSL used directly.
+ */
+export type TelemetryElevationSource = 'height_above_takeoff' | 'gps_altitude';
 
 export interface GeoJsonFeatureCollection {
     type: 'FeatureCollection';
@@ -31,6 +37,8 @@ export interface GeoJsonLineStringFeature {
         pointCount: number;
         startTime?: string;
         endTime?: string;
+        elevationSource?: TelemetryElevationSource;
+        takeoffMslMeters?: number;
     };
 }
 
@@ -47,6 +55,7 @@ export interface GeoJsonPointFeature {
         timestamp?: string;
         gpsAltitude?: number;
         heightAboveTakeoff?: number;
+        hybridAltitude?: number;
     };
 }
 
@@ -58,9 +67,54 @@ function lineStringCoordinates(positions: GeoJsonPosition[]): GeoJsonPosition[] 
     return positions;
 }
 
+/** MSL meters at takeoff from first fix with GPS: gps_altitude - height_above_takeoff. */
+export function takeoffMslMeters(points: SkydioTelemetryPoint[]): number | undefined {
+    for (const point of points) {
+        if (point.gps_altitude == null) continue;
+        const agl = point.height_above_takeoff ?? 0;
+        return point.gps_altitude - agl;
+    }
+    return undefined;
+}
+
+function aglMeters(point: SkydioTelemetryPoint): number | undefined {
+    if (point.height_above_takeoff != null) {
+        return point.height_above_takeoff;
+    }
+    if (point.hybrid_altitude != null) {
+        return point.hybrid_altitude;
+    }
+    return undefined;
+}
+
+/** GeoJSON Z is always MSL meters (WGS84 ellipsoid height). */
+function telemetryHeightMsl(
+    point: SkydioTelemetryPoint,
+    source: TelemetryElevationSource,
+    takeoffMsl: number | undefined,
+    fallbackMsl: number | undefined,
+): number {
+    if (source === 'gps_altitude') {
+        if (point.gps_altitude != null) {
+            return point.gps_altitude;
+        }
+        return fallbackMsl ?? 0;
+    }
+
+    const agl = aglMeters(point);
+    if (agl != null && takeoffMsl != null) {
+        return takeoffMsl + agl;
+    }
+    if (point.gps_altitude != null) {
+        return point.gps_altitude;
+    }
+    return fallbackMsl ?? 0;
+}
+
 export function telemetryToGeoJson(
     telemetry: SkydioFlightTelemetryResponse,
     mode: TelemetryGeoJsonMode = 'line',
+    elevationSource: TelemetryElevationSource = 'height_above_takeoff',
 ): GeoJsonFeatureCollection {
     const flight = telemetry.data.flight;
     const points = telemetry.data.flight_telemetry?.aligned_telemetry ?? [];
@@ -75,8 +129,11 @@ export function telemetryToGeoJson(
         return { type: 'FeatureCollection', features: [] };
     }
 
+    const takeoffMsl = takeoffMslMeters(validPoints);
+    let lastMsl = takeoffMsl;
     const positions = validPoints.map((point) => {
-        const z = point.gps_altitude ?? point.height_above_takeoff ?? 0;
+        const z = telemetryHeightMsl(point, elevationSource, takeoffMsl, lastMsl);
+        lastMsl = z;
         return [point.gps_longitude!, point.gps_latitude!, z] as GeoJsonPosition;
     });
 
@@ -97,6 +154,8 @@ export function telemetryToGeoJson(
                 pointCount: validPoints.length,
                 startTime,
                 endTime,
+                elevationSource,
+                takeoffMslMeters: takeoffMsl,
             },
         });
     }
@@ -116,6 +175,7 @@ export function telemetryToGeoJson(
                     timestamp: point.timestamp,
                     gpsAltitude: point.gps_altitude,
                     heightAboveTakeoff: point.height_above_takeoff,
+                    hybridAltitude: point.hybrid_altitude,
                 },
             });
         });

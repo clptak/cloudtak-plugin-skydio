@@ -24,6 +24,7 @@ export interface SkydioTelemetryPoint {
     gps_longitude?: number;
     gps_altitude?: number;
     height_above_takeoff?: number;
+    hybrid_altitude?: number;
     timestamp?: string;
 }
 
