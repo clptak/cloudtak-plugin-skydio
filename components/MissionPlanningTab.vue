@@ -109,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { TablerInput } from '@tak-ps/vue-tabler';
 import { useMapStore } from '../../../src/stores/map.ts';
 import type { Feature } from '../../../src/types.ts';
@@ -121,6 +121,63 @@ import {
 } from '../utils/skydioMission';
 
 const mapStore = useMapStore();
+
+// #region agent log
+interface DebugMapState {
+    selected?: { values?: () => Iterable<unknown>; size?: number };
+    radial?: { mode?: unknown; cot?: unknown };
+    viewedFeature?: unknown;
+    select?: { feats?: unknown[] };
+}
+
+function debugGeomType(value: unknown): string | null {
+    if (value && typeof value === 'object') {
+        const cot = value as { as_feature?: () => { geometry?: { type?: string } } };
+        if (typeof cot.as_feature === 'function') {
+            try {
+                return cot.as_feature().geometry?.type ?? 'no-geometry';
+            } catch {
+                return 'as_feature-threw';
+            }
+        }
+        const feat = value as { geometry?: { type?: string } };
+        if (feat.geometry) return feat.geometry.type ?? 'no-type';
+    }
+    return value == null ? null : 'non-feature';
+}
+
+function debugCaptureMapState(where: string): void {
+    const m = mapStore as unknown as DebugMapState;
+    const selectedEntries = Array.from(m.selected?.values?.() ?? []);
+    fetch('http://127.0.0.1:7476/ingest/03b14338-79f6-4e2b-aa33-ecb1824b3829', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'f269f9' },
+        body: JSON.stringify({
+            sessionId: 'f269f9',
+            runId: 'run1',
+            hypothesisId: 'A,B,C,D,E',
+            location: 'MissionPlanningTab.vue:debugCaptureMapState',
+            message: `map selection state @ ${where}`,
+            data: {
+                where,
+                href: typeof window !== 'undefined' ? window.location.href : null,
+                selectedSize: m.selected?.size ?? null,
+                selectedTypes: selectedEntries.map((e) => debugGeomType(e)),
+                radialMode: m.radial?.mode ?? null,
+                radialCotType: debugGeomType(m.radial?.cot),
+                viewedFeatureType: debugGeomType(m.viewedFeature),
+                selectFeatsLen: Array.isArray(m.select?.feats) ? m.select?.feats.length : null,
+                selectFeatsTypes: Array.isArray(m.select?.feats)
+                    ? m.select?.feats.map((e) => debugGeomType(e))
+                    : null,
+            },
+            timestamp: Date.now(),
+        }),
+    }).catch(() => {});
+}
+
+onMounted(() => debugCaptureMapState('tab-mounted'));
+// #endregion
 
 const modalOpen = ref(false);
 const notice = ref<string | null>(null);
@@ -189,6 +246,10 @@ const canGenerate = computed(() => Boolean(form.displayName.trim()));
 function openModal(): void {
     notice.value = null;
     noticeIsError.value = false;
+
+    // #region agent log
+    debugCaptureMapState('import-click');
+    // #endregion
 
     const info = selected.value;
     if (!info) {
