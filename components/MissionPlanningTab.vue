@@ -109,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { TablerInput } from '@tak-ps/vue-tabler';
 import { useMapStore } from '../../../src/stores/map.ts';
 import type { Feature } from '../../../src/types.ts';
@@ -121,6 +121,10 @@ import {
 } from '../utils/skydioMission';
 
 const mapStore = useMapStore();
+
+const props = defineProps<{
+    activeFeature: Feature | null;
+}>();
 
 // #region agent log
 interface DebugMapState {
@@ -177,6 +181,25 @@ function debugCaptureMapState(where: string): void {
 }
 
 onMounted(() => debugCaptureMapState('tab-mounted'));
+
+watch(() => props.activeFeature, (feature) => {
+    fetch('http://127.0.0.1:7476/ingest/03b14338-79f6-4e2b-aa33-ecb1824b3829', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'f269f9' },
+        body: JSON.stringify({
+            sessionId: 'f269f9',
+            runId: 'post-fix',
+            hypothesisId: 'B',
+            location: 'MissionPlanningTab.vue:watch(activeFeature)',
+            message: 'activeFeature prop changed',
+            data: {
+                geometryType: feature?.geometry?.type ?? null,
+                callsign: typeof feature?.properties?.callsign === 'string' ? feature.properties.callsign : null,
+            },
+            timestamp: Date.now(),
+        }),
+    }).catch(() => {});
+}, { immediate: true });
 // #endregion
 
 const modalOpen = ref(false);
@@ -196,25 +219,8 @@ interface SelectedInfo {
     callsign: string;
 }
 
-function asFeature(value: unknown): Feature | null {
-    if (value && typeof value === 'object') {
-        const maybeCot = value as { as_feature?: (opts?: { clone?: boolean }) => Feature };
-        if (typeof maybeCot.as_feature === 'function') {
-            return maybeCot.as_feature();
-        }
-        const maybeFeature = value as Feature;
-        if (maybeFeature.geometry) {
-            return maybeFeature;
-        }
-    }
-    return null;
-}
-
 const selected = computed<SelectedInfo | null>(() => {
-    const entries = Array.from(mapStore.selected.values());
-    if (entries.length !== 1) return null;
-
-    const feature = asFeature(entries[0]);
+    const feature = props.activeFeature;
     if (!feature || !feature.geometry) return null;
 
     const callsign = typeof feature.properties?.callsign === 'string'
@@ -229,17 +235,13 @@ const selected = computed<SelectedInfo | null>(() => {
 });
 
 const selectionLabel = computed(() => {
-    const size = mapStore.selected.size;
-    if (size === 0) return 'No feature selected';
-    if (size > 1) return `${size} features selected (select exactly one)`;
-
     const info = selected.value;
-    if (!info) return 'Unsupported selection';
+    if (!info) return 'No map feature captured — click a feature on the map.';
     const name = info.callsign || '(unnamed)';
     return `${name} — ${info.geometryType}`;
 });
 
-const canImport = computed(() => mapStore.selected.size === 1);
+const canImport = computed(() => selected.value !== null);
 
 const canGenerate = computed(() => Boolean(form.displayName.trim()));
 
