@@ -411,6 +411,248 @@ export function buildMapCaptureMission(input: MapCaptureInput): Record<string, u
     };
 }
 
+export interface WaypointMissionInput {
+    displayName: string;
+    /** Waypoint height above takeoff, in meters (WORLD_TAKEOFF frame). */
+    waypointZMeters: number;
+    /** GeoJSON LineString coordinates as [lng, lat] positions. */
+    line: Position[];
+}
+
+/** Extract LineString coordinates from a GeoJSON geometry. */
+export function lineStringCoords(geometry: Geometry): Position[] | null {
+    if (geometry.type !== 'LineString') return null;
+    const coords = geometry.coordinates;
+    if (!Array.isArray(coords) || coords.length < 2) return null;
+    return coords;
+}
+
+function obstacleAvoidanceAction(): Record<string, unknown> {
+    return {
+        actionUuid: crypto.randomUUID(),
+        actionKey: 'SetObstacleAvoidance',
+        args: {
+            setObstacleAvoidance: { oaSetting: 'DEFAULT', freeLookMode: 'UNKNOWN' },
+            photoOnCompletion: false,
+            isSkippable: false,
+        },
+    };
+}
+
+function startVideoAction(): Record<string, unknown> {
+    return {
+        actionUuid: crypto.randomUUID(),
+        actionKey: 'StartVideo',
+        args: {
+            startVideo: {
+                cameraSettings: {
+                    zoomLevel: 1,
+                    recordingMode: 'VIDEO_4K_DEEP_30FPS',
+                    isoMode: 'ISO_MODE_AUTO',
+                    exposureMode: 'EXP_MODE_AUTO',
+                    awbMode: 'AWB_MODE_AUTO',
+                    eoSensor: 'UNKNOWN',
+                    compensationMode: 'COMP_MODE_0',
+                },
+                isoMode: 'ISO_MODE_AUTO',
+                exposureMode: 'EXP_MODE_AUTO',
+                awbMode: 'AWB_MODE_AUTO',
+                freeLookMode: 'UNKNOWN',
+            },
+            photoOnCompletion: false,
+            isSkippable: false,
+        },
+    };
+}
+
+function gotoWaypointAction(latitude: number, longitude: number, zMeters: number): Record<string, unknown> {
+    return {
+        actionUuid: crypto.randomUUID(),
+        actionKey: 'GotoWaypoint',
+        args: {
+            gotoWaypoint: {
+                waypoint: {
+                    xy: { x: latitude, y: longitude, frame: 'GPS' },
+                    z: { value: zMeters, frame: 'WORLD_TAKEOFF' },
+                    heading: { value: 0, frame: 'GPS' },
+                    gimbalPitch: { value: 0.7853982 },
+                },
+                motionArgs: {
+                    traversalArgs: {
+                        speed: 5,
+                        heightMode: 'GRADUAL',
+                        ascendSpeed: 0,
+                        descendSpeed: 0,
+                        ignoreWaypointZ: false,
+                        usePathfinder: false,
+                        useGlobalPathfinder: false,
+                    },
+                    lookAtArgs: {
+                        headingMode: 'GRADUAL',
+                        gimbalPitchMode: 'GRADUAL',
+                        ignoreTargetHeading: false,
+                        ignoreTargetGimbalPitch: false,
+                    },
+                },
+                preserveArScene: false,
+                freeLookMode: 'UNKNOWN',
+            },
+            photoOnCompletion: false,
+            isSkippable: false,
+        },
+    };
+}
+
+function waypointSequenceAction(latitude: number, longitude: number, zMeters: number): Record<string, unknown> {
+    return {
+        actionUuid: crypto.randomUUID(),
+        actionKey: 'Sequence',
+        args: {
+            sequence: {
+                actions: [
+                    obstacleAvoidanceAction(),
+                    startVideoAction(),
+                    gotoWaypointAction(latitude, longitude, zMeters),
+                    obstacleAvoidanceAction(),
+                ],
+                name: '',
+                hideReverseUi: false,
+            },
+            photoOnCompletion: false,
+            isSkippable: false,
+        },
+    };
+}
+
+/**
+ * Build a full Skydio waypoint-flight mission object from a LineString. Mirrors
+ * SKydio_way-point_example.json: each vertex becomes a Sequence of
+ * SetObstacleAvoidance -> StartVideo -> GotoWaypoint -> SetObstacleAvoidance.
+ * Returned object is ready to serialize and download for manual import.
+ */
+export function buildWaypointMission(input: WaypointMissionInput): Record<string, unknown> {
+    const { displayName, waypointZMeters, line } = input;
+
+    const first = line[0];
+
+    return {
+        uuid: crypto.randomUUID(),
+        displayName,
+        templateUuid: crypto.randomUUID(),
+        actions: [
+            {
+                actionUuid: crypto.randomUUID(),
+                actionKey: 'Sequence',
+                args: {
+                    sequence: {
+                        actions: line.map((position) =>
+                            waypointSequenceAction(position[1], position[0], waypointZMeters)),
+                        name: 'root_sequence',
+                        hideReverseUi: false,
+                    },
+                    photoOnCompletion: false,
+                    isSkippable: false,
+                },
+            },
+        ],
+        postMissionAction: 'DEFAULT_RETURN',
+        lostConnectionAction: 'RETURN_TO_HOME',
+        postFailureAction: 'DEFAULT_RETURN',
+        dockMission: true,
+        autoStart: true,
+        showSkipUi: true,
+        expectedGpsOrigin: {
+            lat: first[1],
+            lon: first[0],
+            gpsAltitude: 0,
+            gpsHeading: 0,
+        },
+        recordingMode: 'VIDEO_1080P_30FPS',
+        autonomousAbortMissionOnFailedAction: true,
+        useRtxSettings: true,
+        rtxSettings: {
+            faceForward: true,
+            minimumHeight: 78,
+            waitTime: 60,
+            speed: 8.493746,
+            globalPathfinderReturnHeightAgl: 0,
+            ascendFromCurrentHeight: false,
+            landOnceReturned: false,
+            waitTimeBeforeLand: 0,
+            dontReturnOnLostComms: false,
+            useBacktrack: false,
+            useGlobalPathfinder: false,
+            lowBatteryAutoRth: false,
+            dontDescend: false,
+            dontReturnOnLostCommsInAtti: false,
+            attiReturnAltAgl: 0,
+            cancelAttiReturnWithTimer: false,
+            cancelAttiReturnWaitTime: 0,
+        },
+        useRecordingMode: true,
+        utime: '0',
+        scheduledMissionUuid: '',
+        missionRunnerSkill: 'MISSION_RUNNER',
+        flightId: '',
+        ncpgFileId: '',
+        globalGraphFileId: '',
+        needsGpsInitializationMove: false,
+        returnToPathOnResume: false,
+        useIsoMode: false,
+        isoMode: 'ISO_MODE_AUTO',
+        useExposureMode: false,
+        exposureMode: 'EXP_MODE_AUTO',
+        useAwbMode: false,
+        awbMode: 'AWB_MODE_AUTO',
+        useCompensationMode: false,
+        compensationMode: 'COMP_MODE_0',
+        enableFaultBasedDirectRtd: false,
+        needsNcpgInitialization: false,
+        videoBitrateOverride: 0,
+        navigationModeOverrideEnabled: false,
+        navigationModeOverride: 'UNKNOWN',
+        needsGlobalGraph: false,
+        disableStrobeLights: false,
+        skipUpload: false,
+        skipPausedState: false,
+    };
+}
+
+export interface WaypointTemplateInput {
+    name: string;
+    /** Waypoint height above takeoff, in feet (NAV frame z). */
+    waypointZFeet: number;
+    /** GeoJSON LineString coordinates as [lng, lat] positions. */
+    line: Position[];
+}
+
+/**
+ * Build the documented Skydio POST /v0/mission/template body ({ name, waypoints })
+ * from a LineString. Used by the "Send to Skydio" path. The richer
+ * video/obstacle-avoidance actions from the full template are intentionally
+ * dropped since this schema does not support them.
+ */
+export function buildWaypointTemplate(input: WaypointTemplateInput): Record<string, unknown> {
+    const { name, waypointZFeet, line } = input;
+
+    return {
+        name,
+        waypoints: line.map((position) => ({
+            position: {
+                frame: 'GPS',
+                latitude: position[1],
+                longitude: position[0],
+                z: waypointZFeet,
+                z_frame: 'NAV',
+            },
+            orientation: {
+                heading_degrees: 0,
+                gimbal_pitch_degrees: -45,
+            },
+        })),
+    };
+}
+
 /** Trigger a browser download of an object serialized as pretty-printed JSON. */
 export function downloadMissionJson(mission: Record<string, unknown>, filename: string): void {
     const blob = new Blob([JSON.stringify(mission, null, 2)], { type: 'application/json' });

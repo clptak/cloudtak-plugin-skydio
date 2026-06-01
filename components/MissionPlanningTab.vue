@@ -8,8 +8,9 @@
             </div>
             <div class='card-body'>
                 <p class='text-muted'>
-                    Select a Polygon on the map, then import it here to generate a Skydio
-                    Map Capture mission file for manual import into Skydio Cloud.
+                    Select a feature on the map, then import it here. A Polygon generates a
+                    Skydio Map Capture mission (download); a LineString generates a waypoint
+                    flight you can send to Skydio or download.
                 </p>
 
                 <div class='mb-3'>
@@ -50,7 +51,7 @@
                 <div class='modal-content'>
                     <div class='modal-header'>
                         <h5 class='modal-title'>
-                            New Map Capture Mission
+                            {{ modalTitle }}
                         </h5>
                         <button
                             type='button'
@@ -70,20 +71,21 @@
                             class='mt-3'
                             type='number'
                             label='Area Scan Height (Above Takeoff) — ft'
-                            description='Converted to meters in the generated mission file.'
                         />
-                        <TablerInput
-                            v-model.number='form.areaOverlap'
-                            class='mt-3'
-                            type='number'
-                            label='Set Overlap Percentage'
-                        />
-                        <TablerInput
-                            v-model.number='form.areaSidelap'
-                            class='mt-3'
-                            type='number'
-                            label='Set Side Overlap Percentage'
-                        />
+                        <template v-if='missionType === "mapCapture"'>
+                            <TablerInput
+                                v-model.number='form.areaOverlap'
+                                class='mt-3'
+                                type='number'
+                                label='Set Overlap Percentage'
+                            />
+                            <TablerInput
+                                v-model.number='form.areaSidelap'
+                                class='mt-3'
+                                type='number'
+                                label='Set Side Overlap Percentage'
+                            />
+                        </template>
                     </div>
                     <div class='modal-footer'>
                         <button
@@ -94,12 +96,22 @@
                             Cancel
                         </button>
                         <button
+                            v-if='missionType === "waypoint"'
                             type='button'
                             class='btn btn-primary'
-                            :disabled='!canGenerate'
+                            :disabled='!canGenerate || sending'
+                            @click='sendToSkydio'
+                        >
+                            {{ sending ? 'Sending…' : 'Send to Skydio' }}
+                        </button>
+                        <button
+                            type='button'
+                            class='btn'
+                            :class='missionType === "waypoint" ? "btn-outline-primary" : "btn-primary"'
+                            :disabled='!canGenerate || sending'
                             @click='generateAndDownload'
                         >
-                            Generate &amp; Download
+                            Download JSON
                         </button>
                     </div>
                 </div>
@@ -109,102 +121,30 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { TablerInput } from '@tak-ps/vue-tabler';
-import { useMapStore } from '../../../src/stores/map.ts';
 import type { Feature } from '../../../src/types.ts';
+import { createMissionTemplate } from '../api/client';
+import { ProxyError } from '../api/proxy';
 import {
     FEET_TO_METERS,
     buildMapCaptureMission,
+    buildWaypointMission,
+    buildWaypointTemplate,
     downloadMissionJson,
+    lineStringCoords,
     polygonOuterRing,
 } from '../utils/skydioMission';
 
-const mapStore = useMapStore();
-
 const props = defineProps<{
     activeFeature: Feature | null;
+    apiKey: string;
 }>();
-
-// #region agent log
-interface DebugMapState {
-    selected?: { values?: () => Iterable<unknown>; size?: number };
-    radial?: { mode?: unknown; cot?: unknown };
-    viewedFeature?: unknown;
-    select?: { feats?: unknown[] };
-}
-
-function debugGeomType(value: unknown): string | null {
-    if (value && typeof value === 'object') {
-        const cot = value as { as_feature?: () => { geometry?: { type?: string } } };
-        if (typeof cot.as_feature === 'function') {
-            try {
-                return cot.as_feature().geometry?.type ?? 'no-geometry';
-            } catch {
-                return 'as_feature-threw';
-            }
-        }
-        const feat = value as { geometry?: { type?: string } };
-        if (feat.geometry) return feat.geometry.type ?? 'no-type';
-    }
-    return value == null ? null : 'non-feature';
-}
-
-function debugCaptureMapState(where: string): void {
-    const m = mapStore as unknown as DebugMapState;
-    const selectedEntries = Array.from(m.selected?.values?.() ?? []);
-    fetch('http://127.0.0.1:7476/ingest/03b14338-79f6-4e2b-aa33-ecb1824b3829', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'f269f9' },
-        body: JSON.stringify({
-            sessionId: 'f269f9',
-            runId: 'run1',
-            hypothesisId: 'A,B,C,D,E',
-            location: 'MissionPlanningTab.vue:debugCaptureMapState',
-            message: `map selection state @ ${where}`,
-            data: {
-                where,
-                href: typeof window !== 'undefined' ? window.location.href : null,
-                selectedSize: m.selected?.size ?? null,
-                selectedTypes: selectedEntries.map((e) => debugGeomType(e)),
-                radialMode: m.radial?.mode ?? null,
-                radialCotType: debugGeomType(m.radial?.cot),
-                viewedFeatureType: debugGeomType(m.viewedFeature),
-                selectFeatsLen: Array.isArray(m.select?.feats) ? m.select?.feats.length : null,
-                selectFeatsTypes: Array.isArray(m.select?.feats)
-                    ? m.select?.feats.map((e) => debugGeomType(e))
-                    : null,
-            },
-            timestamp: Date.now(),
-        }),
-    }).catch(() => {});
-}
-
-onMounted(() => debugCaptureMapState('tab-mounted'));
-
-watch(() => props.activeFeature, (feature) => {
-    fetch('http://127.0.0.1:7476/ingest/03b14338-79f6-4e2b-aa33-ecb1824b3829', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'f269f9' },
-        body: JSON.stringify({
-            sessionId: 'f269f9',
-            runId: 'post-fix',
-            hypothesisId: 'B',
-            location: 'MissionPlanningTab.vue:watch(activeFeature)',
-            message: 'activeFeature prop changed',
-            data: {
-                geometryType: feature?.geometry?.type ?? null,
-                callsign: typeof feature?.properties?.callsign === 'string' ? feature.properties.callsign : null,
-            },
-            timestamp: Date.now(),
-        }),
-    }).catch(() => {});
-}, { immediate: true });
-// #endregion
 
 const modalOpen = ref(false);
 const notice = ref<string | null>(null);
 const noticeIsError = ref(false);
+const sending = ref(false);
 
 const form = reactive({
     displayName: '',
@@ -212,6 +152,8 @@ const form = reactive({
     areaOverlap: 50,
     areaSidelap: 30,
 });
+
+type MissionType = 'mapCapture' | 'waypoint';
 
 interface SelectedInfo {
     feature: Feature;
@@ -234,6 +176,14 @@ const selected = computed<SelectedInfo | null>(() => {
     };
 });
 
+const missionType = computed<MissionType | null>(() => {
+    switch (selected.value?.geometryType) {
+        case 'Polygon': return 'mapCapture';
+        case 'LineString': return 'waypoint';
+        default: return null;
+    }
+});
+
 const selectionLabel = computed(() => {
     const info = selected.value;
     if (!info) return 'No map feature captured — click a feature on the map.';
@@ -241,34 +191,34 @@ const selectionLabel = computed(() => {
     return `${name} — ${info.geometryType}`;
 });
 
-const canImport = computed(() => selected.value !== null);
+const canImport = computed(() => missionType.value !== null);
 
 const canGenerate = computed(() => Boolean(form.displayName.trim()));
+
+const modalTitle = computed(() =>
+    missionType.value === 'waypoint' ? 'New Waypoint Flight' : 'New Map Capture Mission');
 
 function openModal(): void {
     notice.value = null;
     noticeIsError.value = false;
 
-    // #region agent log
-    debugCaptureMapState('import-click');
-    // #endregion
-
     const info = selected.value;
     if (!info) {
-        notice.value = 'Select exactly one map feature first.';
+        notice.value = 'Click a feature on the map first.';
         noticeIsError.value = true;
         return;
     }
 
-    if (info.geometryType !== 'Polygon') {
-        notice.value = info.geometryType === 'Point' || info.geometryType === 'LineString'
-            ? 'Waypoint flights (Point / LineString) coming soon. Select a Polygon for a Map Capture mission.'
-            : `Unsupported geometry "${info.geometryType}". Select a Polygon.`;
+    if (missionType.value === null) {
+        notice.value = info.geometryType === 'Point'
+            ? 'Point flights are not supported yet. Select a Polygon (Map Capture) or LineString (waypoint flight).'
+            : `Unsupported geometry "${info.geometryType}". Select a Polygon or LineString.`;
         noticeIsError.value = true;
         return;
     }
 
-    form.displayName = info.callsign || 'Skydio Map Capture';
+    form.displayName = info.callsign
+        || (missionType.value === 'waypoint' ? 'Skydio Waypoint Flight' : 'Skydio Map Capture');
     form.areaScanHeightFt = 300;
     form.areaOverlap = 50;
     form.areaSidelap = 30;
@@ -279,37 +229,102 @@ function closeModal(): void {
     modalOpen.value = false;
 }
 
+function safeFileName(displayName: string): string {
+    return displayName.replace(/[^a-z0-9_-]+/gi, '_') || 'skydio-mission';
+}
+
 function generateAndDownload(): void {
     const info = selected.value;
     if (!info) {
-        notice.value = 'Map selection changed — re-select a Polygon and try again.';
-        noticeIsError.value = true;
-        modalOpen.value = false;
-        return;
-    }
-
-    const ring = polygonOuterRing(info.feature.geometry);
-    if (!ring) {
-        notice.value = 'Selected feature is not a valid Polygon.';
+        notice.value = 'Map selection changed — re-select a feature and try again.';
         noticeIsError.value = true;
         modalOpen.value = false;
         return;
     }
 
     const displayName = form.displayName.trim();
-    const mission = buildMapCaptureMission({
-        displayName,
-        areaScanHeightMeters: form.areaScanHeightFt * FEET_TO_METERS,
-        areaOverlap: form.areaOverlap,
-        areaSidelap: form.areaSidelap,
-        ring,
-    });
+    let mission: Record<string, unknown>;
 
-    const safeName = displayName.replace(/[^a-z0-9_-]+/gi, '_') || 'skydio-mission';
+    if (missionType.value === 'mapCapture') {
+        const ring = polygonOuterRing(info.feature.geometry);
+        if (!ring) {
+            notice.value = 'Selected feature is not a valid Polygon.';
+            noticeIsError.value = true;
+            modalOpen.value = false;
+            return;
+        }
+        mission = buildMapCaptureMission({
+            displayName,
+            areaScanHeightMeters: form.areaScanHeightFt * FEET_TO_METERS,
+            areaOverlap: form.areaOverlap,
+            areaSidelap: form.areaSidelap,
+            ring,
+        });
+    } else {
+        const line = lineStringCoords(info.feature.geometry);
+        if (!line) {
+            notice.value = 'Selected feature is not a valid LineString.';
+            noticeIsError.value = true;
+            modalOpen.value = false;
+            return;
+        }
+        mission = buildWaypointMission({
+            displayName,
+            waypointZMeters: form.areaScanHeightFt * FEET_TO_METERS,
+            line,
+        });
+    }
+
+    const safeName = safeFileName(displayName);
     downloadMissionJson(mission, `${safeName}.json`);
 
     modalOpen.value = false;
     notice.value = `Downloaded "${safeName}.json". Import it into Skydio Cloud.`;
     noticeIsError.value = false;
+}
+
+async function sendToSkydio(): Promise<void> {
+    const info = selected.value;
+    if (!info || missionType.value !== 'waypoint') {
+        notice.value = 'Map selection changed — re-select a LineString and try again.';
+        noticeIsError.value = true;
+        modalOpen.value = false;
+        return;
+    }
+
+    const line = lineStringCoords(info.feature.geometry);
+    if (!line) {
+        notice.value = 'Selected feature is not a valid LineString.';
+        noticeIsError.value = true;
+        return;
+    }
+
+    if (!props.apiKey.trim()) {
+        notice.value = 'Add your Skydio API key in Settings before sending.';
+        noticeIsError.value = true;
+        return;
+    }
+
+    sending.value = true;
+    notice.value = null;
+
+    try {
+        const template = await createMissionTemplate(props.apiKey, buildWaypointTemplate({
+            name: form.displayName.trim(),
+            waypointZFeet: form.areaScanHeightFt,
+            line,
+        }));
+
+        modalOpen.value = false;
+        notice.value = `Sent to Skydio — created mission template${template.uuid ? ` (${template.uuid})` : ''}.`;
+        noticeIsError.value = false;
+    } catch (err) {
+        notice.value = err instanceof ProxyError || err instanceof Error
+            ? err.message
+            : 'Failed to send mission to Skydio';
+        noticeIsError.value = true;
+    } finally {
+        sending.value = false;
+    }
 }
 </script>

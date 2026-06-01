@@ -195,6 +195,22 @@ export async function listWebhooks(apiKey: string): Promise<SkydioWebhook[]> {
     return assertOk(res).data.webhooks ?? [];
 }
 
+export async function createMissionTemplate(
+    apiKey: string,
+    body: Record<string, unknown>,
+): Promise<{ uuid?: string; name?: string } & Record<string, unknown>> {
+    const res = await proxyRequest<SkydioApiResponse<{ mission_template: Record<string, unknown> }>>({
+        url: `${SKYDIO_API_BASE}/v0/mission/template`,
+        method: 'POST',
+        headers: {
+            ...authHeaders(apiKey),
+            'content-type': 'application/json',
+        },
+        body,
+    });
+    return assertOk(res).data.mission_template;
+}
+
 export async function createWebhook(
     apiKey: string,
     name: string,

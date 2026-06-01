@@ -15,6 +15,7 @@
         <MissionPlanningTab
             v-else-if='activeTab === "missions"'
             :active-feature='activeMapFeature'
+            :api-key='settings.apiKey'
         />
         <VehiclesTab
             v-else-if='activeTab === "vehicles"'
@@ -274,51 +275,6 @@ onMounted(() => {
     window.addEventListener('storage', reloadForUser);
     userCheckTimer = setInterval(reloadForUser, 3000);
     captureActiveFeature();
-
-    // #region agent log
-    {
-        const m = mapStore as unknown as {
-            selected?: { values?: () => Iterable<unknown>; size?: number };
-            radial?: { mode?: unknown; cot?: unknown };
-            viewedFeature?: unknown;
-            select?: { feats?: unknown[] };
-        };
-        const geomType = (value: unknown): string | null => {
-            if (value && typeof value === 'object') {
-                const cot = value as { as_feature?: () => { geometry?: { type?: string } } };
-                if (typeof cot.as_feature === 'function') {
-                    try { return cot.as_feature().geometry?.type ?? 'no-geometry'; } catch { return 'as_feature-threw'; }
-                }
-                const feat = value as { geometry?: { type?: string } };
-                if (feat.geometry) return feat.geometry.type ?? 'no-type';
-            }
-            return value == null ? null : 'non-feature';
-        };
-        const selectedEntries = Array.from(m.selected?.values?.() ?? []);
-        fetch('http://127.0.0.1:7476/ingest/03b14338-79f6-4e2b-aa33-ecb1824b3829', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'f269f9' },
-            body: JSON.stringify({
-                sessionId: 'f269f9',
-                runId: 'run1',
-                hypothesisId: 'B,D,E',
-                location: 'SkydioPanel.vue:onMounted',
-                message: 'map selection state @ panel-mounted',
-                data: {
-                    where: 'panel-mounted',
-                    href: typeof window !== 'undefined' ? window.location.href : null,
-                    selectedSize: m.selected?.size ?? null,
-                    selectedTypes: selectedEntries.map((e) => geomType(e)),
-                    radialMode: m.radial?.mode ?? null,
-                    radialCotType: geomType(m.radial?.cot),
-                    viewedFeatureType: geomType(m.viewedFeature),
-                    selectFeatsLen: Array.isArray(m.select?.feats) ? m.select?.feats.length : null,
-                },
-                timestamp: Date.now(),
-            }),
-        }).catch(() => {});
-    }
-    // #endregion
 });
 
 onUnmounted(() => {
