@@ -138,3 +138,159 @@ export function hasSseConfig(settings: SkydioSettings): boolean {
 export const SKYDIO_API_BASE = 'https://api.skydio.com/api';
 /** @deprecated Use per-user keys via storage/settings.ts */
 export const SETTINGS_KEY = 'cloudtak-plugin-skydio:settings';
+
+// ---------------------------------------------------------------------------
+// Pre-Flight tab
+// ---------------------------------------------------------------------------
+
+/**
+ * Manufacturer / operational limits for a drone platform. Any field left
+ * undefined is skipped during the performance check. All values use the same
+ * units the WEATHER section of the form displays (imperial).
+ */
+export interface DronePerformanceSpec {
+    /** Maximum sustained wind the platform is rated for, in mph. */
+    maxWindMph?: number;
+    /** Minimum operating temperature, in degrees Fahrenheit. */
+    minTempF?: number;
+    /** Maximum operating temperature, in degrees Fahrenheit. */
+    maxTempF?: number;
+    /** Minimum acceptable visibility, in statute miles. */
+    minVisibilityMiles?: number;
+    /** Maximum acceptable planetary K-index (geomagnetic activity). */
+    maxKpIndex?: number;
+}
+
+/** A drone platform option, populating the PLATFORM list. */
+export interface PreflightPlatform {
+    name: string;
+    specs?: DronePerformanceSpec;
+}
+
+/** A remote pilot option, populating the Remote Pilots list. */
+export interface RemotePilot {
+    /** Badge / callsign identifier shown in the list (e.g. AZ-CCSO-RPIC-S064). */
+    id: string;
+    /** Optional human-readable name. */
+    name?: string;
+}
+
+/**
+ * Uploaded configuration that populates the Land Manager / Owner, PLATFORM, and
+ * Remote Pilots lists, and supplies per-platform performance specs.
+ */
+export interface PreflightConfig {
+    landManagers: string[];
+    platforms: PreflightPlatform[];
+    remotePilots: RemotePilot[];
+}
+
+export const DEFAULT_PREFLIGHT_CONFIG: PreflightConfig = {
+    landManagers: [
+        'United States Forest Service',
+        'National Park Service',
+        'Bureau of Land Management',
+        'State Land',
+        'County',
+        'Native American Reservation',
+        'Private',
+        'Other',
+    ],
+    platforms: [
+        { name: 'Skydio X10' },
+        { name: 'Skydio X2' },
+        { name: 'DJI Mavic 2 Enterprise Advanced' },
+        { name: 'Other' },
+    ],
+    remotePilots: [],
+};
+
+/** Weather values for the WEATHER section, in imperial units. */
+export interface PreflightWeather {
+    temperatureF: number | null;
+    dewPointF: number | null;
+    windSpeedMph: number | null;
+    windDirection: string;
+    kpIndex: string;
+    visibilityMiles: number | null;
+    ceilingFt: number | null;
+    source: string;
+}
+
+export const EMPTY_WEATHER: PreflightWeather = {
+    temperatureF: null,
+    dewPointF: null,
+    windSpeedMph: null,
+    windDirection: '',
+    kpIndex: '',
+    visibilityMiles: null,
+    ceilingFt: null,
+    source: '',
+};
+
+/** Result of comparing one weather metric to a drone spec limit. */
+export interface PerformanceMetricResult {
+    label: string;
+    value: string;
+    limit: string;
+    pass: boolean;
+}
+
+/** Aggregate performance check against a platform's specs. */
+export interface PerformanceEvaluation {
+    /** True only when every evaluated metric passes. */
+    overallPass: boolean;
+    /** Empty when the platform has no specs to check against. */
+    metrics: PerformanceMetricResult[];
+}
+
+/** Full pre-flight form state. Mirrors the core sections of Pre-Flight.xml. */
+export interface PreflightFormState {
+    dateTime: string;
+    location: string;
+    latitude: number | null;
+    longitude: number | null;
+    activityNumber: string;
+    demaNumber: string;
+    airspaceClass: string;
+    maxAltitudeAglFt: number | null;
+    laancRequired: string;
+    laancAuthNumber: string;
+
+    flightCategory: string;
+    missionType: string;
+    flightRules: string[];
+    landManagers: string[];
+    landManagerPermissionRequired: string;
+    mapSources: string[];
+    mapSourceOther: string;
+    platform: string;
+    platformOther: string;
+    dataCollection: string[];
+    dataCollectionOther: string;
+
+    forecastAttached: string;
+    weather: PreflightWeather;
+
+    aviationHazards: string;
+    groundHazards: string;
+    crewEquipmentHazards: string;
+
+    remotePilots: string[];
+    visualObservers: string[];
+    crewMembers: string;
+}
+
+/** A generated report stored in the reports list. */
+export interface PreflightReport {
+    id: string;
+    title: string;
+    createdAt: string;
+    location: string;
+    platform: string;
+    /** Null when no platform specs were available to evaluate. */
+    overallPass: boolean | null;
+    fileName: string;
+    /** Base64-encoded PDF payload (no data: prefix). */
+    pdfBase64: string;
+}

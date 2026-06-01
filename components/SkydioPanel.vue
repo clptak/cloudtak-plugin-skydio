@@ -5,8 +5,13 @@
             :options='tabs'
         />
 
+        <PreFlightTab
+            v-if='activeTab === "preflight"'
+            :active-feature='activeMapFeature'
+            :mission-guid='mapStore.mission?.meta.guid'
+        />
         <GetFlightsTab
-            v-if='activeTab === "flights"'
+            v-else-if='activeTab === "flights"'
             :api-key='settings.apiKey'
             :vehicles='vehicles'
             :telemetry-relay-url='settings.skydioTelemetryRelayUrl'
@@ -56,6 +61,7 @@ import { TablerPillGroup } from '@tak-ps/vue-tabler';
 import { useMapStore } from '../../../src/stores/map.ts';
 import type { Feature } from '../../../src/types.ts';
 import { std } from '../../../src/std.ts';
+import PreFlightTab from './PreFlightTab.vue';
 import GetFlightsTab from './GetFlightsTab.vue';
 import MissionPlanningTab from './MissionPlanningTab.vue';
 import VehiclesTab from './VehiclesTab.vue';
@@ -87,6 +93,7 @@ async function logFlightStatusToMission(
 }
 
 const tabs = [
+    { value: 'preflight', label: 'Pre-Flight' },
     { value: 'flights', label: 'Get Flights' },
     { value: 'missions', label: 'Mission Planning' },
     { value: 'vehicles', label: 'Vehicles' },
@@ -96,7 +103,7 @@ const tabs = [
 ];
 
 const mapStore = useMapStore();
-const activeTab = ref('flights');
+const activeTab = ref('preflight');
 
 /**
  * The feature the user most recently interacted with on the map. A normal
