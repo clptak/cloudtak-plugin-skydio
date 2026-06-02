@@ -15,6 +15,6 @@
       "../../../src/types.ts": ["stubs/types.ts"]
     }
   },
-  "include": ["**/*.ts", "components/**/*.vue", "env.d.ts", "stubs/**/*.ts", "vendor/**/*.d.ts"],
+  "include": ["**/*.ts", "components/**/*.vue", "env.d.ts", "stubs/**/*.ts"],
   "exclude": ["node_modules", "cloudtak_plugin_docs/example.ts"]
 }

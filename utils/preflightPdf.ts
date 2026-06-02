@@ -1,4 +1,4 @@
-import { jsPDF } from '../vendor/jspdf.es.min.js';
+import { jsPDF } from 'jspdf';
 import type {
     PerformanceEvaluation,
     PreflightFormState,
