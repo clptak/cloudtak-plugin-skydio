@@ -145,41 +145,45 @@
                     </option>
                 </select>
 
-                <label class='form-label mt-3'>Flight Rule(s)</label>
-                <label
-                    v-for='opt in FLIGHT_RULES'
-                    :key='opt'
-                    class='form-check'
+                <label class='form-label mt-3'>Flight Rule</label>
+                <select
+                    v-model='form.flightRule'
+                    class='form-select'
                 >
-                    <input
-                        v-model='form.flightRules'
-                        class='form-check-input'
-                        type='checkbox'
+                    <option value=''>
+                        Select…
+                    </option>
+                    <option
+                        v-for='opt in FLIGHT_RULES'
+                        :key='opt'
                         :value='opt'
                     >
-                    <span class='form-check-label'>{{ opt }}</span>
-                </label>
+                        {{ opt }}
+                    </option>
+                </select>
 
                 <label class='form-label mt-3'>Land Manager / Owner</label>
+                <select
+                    v-model='form.landManager'
+                    class='form-select'
+                >
+                    <option value=''>
+                        Select…
+                    </option>
+                    <option
+                        v-for='manager in config.landManagers'
+                        :key='manager'
+                        :value='manager'
+                    >
+                        {{ manager }}
+                    </option>
+                </select>
                 <div
                     v-if='config.landManagers.length === 0'
-                    class='form-hint'
+                    class='form-hint mt-1'
                 >
                     Upload a config file to populate this list.
                 </div>
-                <label
-                    v-for='manager in config.landManagers'
-                    :key='manager'
-                    class='form-check'
-                >
-                    <input
-                        v-model='form.landManagers'
-                        class='form-check-input'
-                        type='checkbox'
-                        :value='manager'
-                    >
-                    <span class='form-check-label'>{{ manager }}</span>
-                </label>
 
                 <label class='form-label mt-3'>Land Manager Permission Required</label>
                 <select
@@ -744,8 +748,8 @@ function createForm(): PreflightFormState {
         laancAuthNumber: '',
         flightCategory: '',
         missionType: '',
-        flightRules: [],
-        landManagers: [],
+        flightRule: '',
+        landManager: '',
         landManagerPermissionRequired: '',
         mapSources: [],
         mapSourceOther: '',

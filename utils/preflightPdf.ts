@@ -187,8 +187,8 @@ export function buildPreflightPdf(input: PreflightPdfInput): jsPDF {
     b.sectionTitle('Flight Type');
     b.row('Flight Category', fmt(form.flightCategory));
     b.row('Mission Type', fmt(form.missionType));
-    b.row('Flight Rule(s)', fmtList(form.flightRules));
-    b.row('Land Manager / Owner', fmtList(form.landManagers));
+    b.row('Flight Rule', fmt(form.flightRule));
+    b.row('Land Manager / Owner', fmt(form.landManager));
     b.row('Land Manager Permission Required', fmt(form.landManagerPermissionRequired));
     b.row('Map Sources', fmtList([...form.mapSources, form.mapSourceOther].filter(Boolean)));
     b.row('Data Collection', fmtList([...form.dataCollection, form.dataCollectionOther].filter(Boolean)));

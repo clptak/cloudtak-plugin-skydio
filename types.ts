@@ -262,8 +262,8 @@ export interface PreflightFormState {
 
     flightCategory: string;
     missionType: string;
-    flightRules: string[];
-    landManagers: string[];
+    flightRule: string;
+    landManager: string;
     landManagerPermissionRequired: string;
     mapSources: string[];
     mapSourceOther: string;
