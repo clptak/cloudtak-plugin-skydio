@@ -23,6 +23,7 @@ const COLOR_TEXT: RGB = [33, 37, 41];
 const COLOR_MUTED: RGB = [108, 117, 125];
 const COLOR_PASS: RGB = [25, 135, 84];
 const COLOR_FAIL: RGB = [220, 53, 69];
+const COLOR_WARN: RGB = [245, 159, 0];
 
 function fmt(value: string | number | null | undefined): string {
     if (value === null || value === undefined || value === '') return '\u2014';
@@ -136,9 +137,10 @@ class PdfBuilder {
             this.doc.text(m.label, cols[0], this.y);
             this.doc.text(m.value, cols[1], this.y);
             this.doc.text(m.limit, cols[2], this.y);
-            this.doc.setTextColor(...(m.pass ? COLOR_PASS : COLOR_FAIL));
+            const statusColor = m.status === 'pass' ? COLOR_PASS : m.status === 'warn' ? COLOR_WARN : COLOR_FAIL;
+            this.doc.setTextColor(...statusColor);
             this.doc.setFont('helvetica', 'bold');
-            this.doc.text(m.pass ? 'PASS' : 'FAIL', cols[3], this.y);
+            this.doc.text(m.status.toUpperCase(), cols[3], this.y);
             this.doc.setFont('helvetica', 'normal');
             this.y += 5.5;
         }

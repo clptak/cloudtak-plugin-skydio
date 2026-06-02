@@ -430,9 +430,9 @@
                             <td>
                                 <span
                                     class='badge'
-                                    :class='metric.pass ? "bg-green text-white" : "bg-red text-white"'
+                                    :class='metricBadgeClass(metric.status)'
                                 >
-                                    {{ metric.pass ? 'PASS' : 'FAIL' }}
+                                    {{ metricBadgeLabel(metric.status) }}
                                 </span>
                             </td>
                         </tr>
@@ -636,6 +636,7 @@ import { TablerInput, TablerAlert } from '@tak-ps/vue-tabler';
 import type { Feature } from '../../../src/types.ts';
 import {
     EMPTY_WEATHER,
+    type PerformanceStatus,
     type PreflightConfig,
     type PreflightFormState,
     type PreflightReport,
@@ -801,6 +802,18 @@ const overallBadgeClass = computed(() => {
     if (evaluation.value.metrics.length === 0) return 'bg-secondary text-white';
     return evaluation.value.overallPass ? 'bg-green text-white' : 'bg-red text-white';
 });
+
+function metricBadgeClass(status: PerformanceStatus): string {
+    if (status === 'pass') return 'bg-green text-white';
+    if (status === 'warn') return 'bg-yellow text-dark';
+    return 'bg-red text-white';
+}
+
+function metricBadgeLabel(status: PerformanceStatus): string {
+    if (status === 'pass') return 'PASS';
+    if (status === 'warn') return 'WARN';
+    return 'FAIL';
+}
 
 function reportBadgeLabel(pass: boolean | null): string {
     if (pass === null) return 'N/A';

@@ -228,17 +228,20 @@ export const EMPTY_WEATHER: PreflightWeather = {
     source: '',
 };
 
+/** Pass = within spec, warn = non-blocking (e.g. missing optional input), fail = out of spec. */
+export type PerformanceStatus = 'pass' | 'warn' | 'fail';
+
 /** Result of comparing one weather metric to a drone spec limit. */
 export interface PerformanceMetricResult {
     label: string;
     value: string;
     limit: string;
-    pass: boolean;
+    status: PerformanceStatus;
 }
 
 /** Aggregate performance check against a platform's specs. */
 export interface PerformanceEvaluation {
-    /** True only when every evaluated metric passes. */
+    /** True when no metric is failing (warnings do not block). */
     overallPass: boolean;
     /** Empty when the platform has no specs to check against. */
     metrics: PerformanceMetricResult[];
