@@ -77,48 +77,12 @@ async function uploadToMission(
     if (!res.ok) {
         const errText = await res.text().catch(() => '');
         const errMessage = parseApiError(res, errText);
-        // #region agent log
-        fetch('http://127.0.0.1:7476/ingest/03b14338-79f6-4e2b-aa33-ecb1824b3829', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '1ba27b' },
-            body: JSON.stringify({
-                sessionId: '1ba27b',
-                runId: 'post-fix-v2',
-                hypothesisId: 'mission-upload',
-                location: 'missionAttachment.ts:uploadToMission',
-                message: 'mission upload failed',
-                data: {
-                    uploadUrl,
-                    fileName: safeName,
-                    blobSize: buffer.byteLength,
-                    status: res.status,
-                    errMessage,
-                },
-                timestamp: Date.now(),
-            }),
-        }).catch(() => {});
-        // #endregion
         throw new MissionAttachError(
             errMessage
                 ? `Mission file upload failed (${res.status}): ${errMessage}`
                 : `Mission file upload failed (${res.status}).`,
         );
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7476/ingest/03b14338-79f6-4e2b-aa33-ecb1824b3829', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '1ba27b' },
-        body: JSON.stringify({
-            sessionId: '1ba27b',
-            runId: 'post-fix-v2',
-            hypothesisId: 'mission-upload',
-            location: 'missionAttachment.ts:uploadToMission',
-            message: 'mission upload ok',
-            data: { fileName: safeName, blobSize: buffer.byteLength },
-            timestamp: Date.now(),
-        }),
-    }).catch(() => {});
-    // #endregion
 }
 
 /** Post a log entry referencing the report when a file attachment is not possible. */
@@ -158,26 +122,6 @@ export async function attachReportToMission(
     }
 
     try {
-        // #region agent log
-        fetch('http://127.0.0.1:7476/ingest/03b14338-79f6-4e2b-aa33-ecb1824b3829', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '1ba27b' },
-            body: JSON.stringify({
-                sessionId: '1ba27b',
-                runId: 'post-fix-v2',
-                hypothesisId: 'mission-upload',
-                location: 'missionAttachment.ts:attachReportToMission',
-                message: 'attach start',
-                data: {
-                    missionGuidLen: missionGuid.length,
-                    hasMissionToken: Boolean(missionToken),
-                    fileName,
-                    blobSize: pdfBlob.size,
-                },
-                timestamp: Date.now(),
-            }),
-        }).catch(() => {});
-        // #endregion
         await uploadToMission(missionGuid, pdfBlob, fileName, missionToken);
         return { method: 'file', message: `Attached "${fileName}" to the active mission.` };
     } catch (err) {
