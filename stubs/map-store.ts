@@ -2,7 +2,7 @@ import type { Feature } from './types.ts';
 
 /** Stub for CloudTAK host map store when typechecking outside CloudTAK. */
 export function useMapStore(): {
-    mission?: { meta: { guid: string } };
+    mission?: { meta: { guid: string }; token?: string };
     toImport: Feature[];
     selected: Map<string, { as_feature?: () => Feature }>;
 } {

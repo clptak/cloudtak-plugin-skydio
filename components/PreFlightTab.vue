@@ -701,6 +701,7 @@ import { attachReportToMission } from '../utils/missionAttachment';
 const props = defineProps<{
     activeFeature: Feature | null;
     missionGuid?: string;
+    missionToken?: string;
 }>();
 
 const AIRSPACE_CLASSES = ['G', 'D', 'E', 'C', 'B'];
@@ -966,7 +967,12 @@ async function attachReport(report: PreflightReport): Promise<void> {
 
     try {
         const blob = base64ToPdfBlob(report.pdfBase64);
-        const result = await attachReportToMission(props.missionGuid ?? '', blob, report.fileName);
+        const result = await attachReportToMission(
+            props.missionGuid ?? '',
+            blob,
+            report.fileName,
+            props.missionToken,
+        );
         actionNotice.value = result.message;
         actionError.value = result.method === 'log';
     } catch (err) {

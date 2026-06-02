@@ -9,6 +9,7 @@
             v-if='activeTab === "preflight"'
             :active-feature='activeMapFeature'
             :mission-guid='mapStore.mission?.meta.guid'
+            :mission-token='mapStore.mission?.token'
         />
         <GetFlightsTab
             v-else-if='activeTab === "flights"'
