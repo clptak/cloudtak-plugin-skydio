@@ -265,11 +265,11 @@ export interface PreflightFormState {
     flightRule: string;
     landManager: string;
     landManagerPermissionRequired: string;
-    mapSources: string[];
+    mapSource: string;
     mapSourceOther: string;
     platform: string;
     platformOther: string;
-    dataCollection: string[];
+    dataCollection: string;
     dataCollectionOther: string;
 
     forecastAttached: string;

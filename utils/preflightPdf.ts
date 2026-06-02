@@ -190,8 +190,8 @@ export function buildPreflightPdf(input: PreflightPdfInput): jsPDF {
     b.row('Flight Rule', fmt(form.flightRule));
     b.row('Land Manager / Owner', fmt(form.landManager));
     b.row('Land Manager Permission Required', fmt(form.landManagerPermissionRequired));
-    b.row('Map Sources', fmtList([...form.mapSources, form.mapSourceOther].filter(Boolean)));
-    b.row('Data Collection', fmtList([...form.dataCollection, form.dataCollectionOther].filter(Boolean)));
+    b.row('Map Source', fmtList([form.mapSource, form.mapSourceOther].filter(Boolean)));
+    b.row('Data Collection', fmtList([form.dataCollection, form.dataCollectionOther].filter(Boolean)));
 
     b.sectionTitle('Weather');
     b.row('Forecast Attached (DataSync)', fmt(form.forecastAttached));

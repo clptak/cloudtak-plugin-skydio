@@ -202,20 +202,24 @@
                     </option>
                 </select>
 
-                <label class='form-label mt-3'>Map Sources</label>
-                <label
-                    v-for='opt in MAP_SOURCES'
-                    :key='opt'
-                    class='form-check'
-                >
-                    <input
-                        v-model='form.mapSources'
-                        class='form-check-input'
-                        type='checkbox'
-                        :value='opt'
+                <label class='form-label mt-3'>Map Source</label>
+                <div class='row'>
+                    <div
+                        v-for='opt in MAP_SOURCES'
+                        :key='opt'
+                        class='col-6'
                     >
-                    <span class='form-check-label'>{{ opt }}</span>
-                </label>
+                        <label class='form-check'>
+                            <input
+                                v-model='form.mapSource'
+                                class='form-check-input'
+                                type='radio'
+                                :value='opt'
+                            >
+                            <span class='form-check-label'>{{ opt }}</span>
+                        </label>
+                    </div>
+                </div>
                 <TablerInput
                     v-model='form.mapSourceOther'
                     class='mt-2'
@@ -223,19 +227,23 @@
                 />
 
                 <label class='form-label mt-3'>Data Collection</label>
-                <label
-                    v-for='opt in DATA_COLLECTION'
-                    :key='opt'
-                    class='form-check'
-                >
-                    <input
-                        v-model='form.dataCollection'
-                        class='form-check-input'
-                        type='checkbox'
-                        :value='opt'
+                <div class='row'>
+                    <div
+                        v-for='opt in DATA_COLLECTION'
+                        :key='opt'
+                        class='col-6'
                     >
-                    <span class='form-check-label'>{{ opt }}</span>
-                </label>
+                        <label class='form-check'>
+                            <input
+                                v-model='form.dataCollection'
+                                class='form-check-input'
+                                type='radio'
+                                :value='opt'
+                            >
+                            <span class='form-check-label'>{{ opt }}</span>
+                        </label>
+                    </div>
+                </div>
                 <TablerInput
                     v-model='form.dataCollectionOther'
                     class='mt-2'
@@ -751,11 +759,11 @@ function createForm(): PreflightFormState {
         flightRule: '',
         landManager: '',
         landManagerPermissionRequired: '',
-        mapSources: [],
+        mapSource: '',
         mapSourceOther: '',
         platform: '',
         platformOther: '',
-        dataCollection: [],
+        dataCollection: '',
         dataCollectionOther: '',
         forecastAttached: '',
         weather: { ...EMPTY_WEATHER },
