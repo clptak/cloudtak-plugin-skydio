@@ -29,18 +29,54 @@ function metric(
 }
 
 /**
+ * Temp/dew-point spread check (always evaluated when both values are present;
+ * does not depend on a platform spec limit).
+ *
+ * Spread = temperature - dew point (°F):
+ *   < 5 and temp < 38 °F  → FAIL  (icing / frost risk)
+ *   < 5                   → WARN  (high humidity / fog risk)
+ *   ≥ 5 or missing values → skipped / n/a
+ */
+function dewPointSpreadMetric(weather: PreflightWeather): PerformanceMetricResult | null {
+    const temp = weather.temperatureF;
+    const dew = weather.dewPointF;
+
+    // Only evaluate when both values are present.
+    if (temp === null || dew === null) return null;
+
+    const spread = temp - dew;
+    if (spread >= 5) return null; // within acceptable range, no row needed
+
+    const spreadStr = `${spread.toFixed(1)}\u00B0F`;
+    const status: PerformanceStatus = temp < 38 ? 'fail' : 'warn';
+    const reason = temp < 38
+        ? 'spread < 5\u00B0F and temp < 38\u00B0F (icing risk)'
+        : 'spread < 5\u00B0F (high humidity / fog risk)';
+
+    return {
+        label: 'Temp \u2212 Dew Point spread',
+        value: spreadStr,
+        limit: reason,
+        status,
+    };
+}
+
+/**
  * Compare the current weather against a platform's performance specs. Any spec
  * left undefined is skipped. Missing wind/temperature values fail (so the gap is
- * noticed); a missing KP index only warns, since it is not auto-populated. When
- * the platform has no specs at all, returns an empty metric list and
- * overallPass = true. Warnings never block (overallPass ignores them).
+ * noticed); a missing KP index only warns, since it is not auto-populated. The
+ * temp/dew-point spread check runs whenever both values are present regardless
+ * of spec. Warnings never block (overallPass only counts fails).
  */
 export function evaluatePerformance(
     weather: PreflightWeather,
     spec: DronePerformanceSpec | undefined,
 ): PerformanceEvaluation {
     if (!spec) {
-        return { overallPass: true, metrics: [] };
+        // Still run the spread check even with no spec.
+        const spreadResult = dewPointSpreadMetric(weather);
+        const metrics = spreadResult ? [spreadResult] : [];
+        return { overallPass: metrics.every((m) => m.status !== 'fail'), metrics };
     }
 
     const candidates = [
@@ -77,6 +113,7 @@ export function evaluatePerformance(
             (l) => `\u2264 ${l}`,
             'warn',
         ),
+        dewPointSpreadMetric(weather),
     ];
 
     const metrics = candidates.filter((m): m is PerformanceMetricResult => m !== null);
