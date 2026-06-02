@@ -1,40 +1,5 @@
 <template>
     <div class='col-12 py-3'>
-        <!-- Configuration upload -->
-        <div class='card mb-3'>
-            <div class='card-header'>
-                <div class='card-title'>
-                    Configuration
-                </div>
-            </div>
-            <div class='card-body'>
-                <p class='text-muted'>
-                    Upload a JSON file to populate the Land Manager / Owner, Platform, and Remote
-                    Pilot lists, and to supply per-platform performance specifications. Saved per
-                    CloudTAK user in this browser.
-                </p>
-                <input
-                    ref='configInput'
-                    class='form-control'
-                    type='file'
-                    accept='.json,application/json'
-                    @change='onConfigFile'
-                >
-                <div class='form-hint mt-1'>
-                    Expected keys: <code>landManagers</code>, <code>platforms</code>
-                    (with optional <code>specs</code>), <code>remotePilots</code>.
-                </div>
-
-                <div
-                    v-if='configNotice'
-                    class='alert mt-3'
-                    :class='configError ? "alert-danger" : "alert-success"'
-                >
-                    {{ configNotice }}
-                </div>
-            </div>
-        </div>
-
         <!-- Location / Airspace / Platform -->
         <div class='card mb-3'>
             <div class='card-header'>
@@ -627,6 +592,64 @@
                 </table>
             </div>
         </div>
+
+        <!-- Configuration upload (accordion) -->
+        <div class='card mt-3'>
+            <div
+                class='card-header'
+                style='cursor: pointer;'
+                @click='configOpen = !configOpen'
+            >
+                <div class='card-title'>
+                    Configuration
+                </div>
+                <div class='card-actions'>
+                    <svg
+                        xmlns='http://www.w3.org/2000/svg'
+                        width='18'
+                        height='18'
+                        viewBox='0 0 24 24'
+                        fill='none'
+                        stroke='currentColor'
+                        stroke-width='2'
+                        stroke-linecap='round'
+                        stroke-linejoin='round'
+                        :style='{ transition: "transform 0.2s", transform: configOpen ? "rotate(180deg)" : "rotate(0deg)" }'
+                    >
+                        <polyline points='6 9 12 15 18 9' />
+                    </svg>
+                </div>
+            </div>
+            <div
+                v-if='configOpen'
+                class='card-body'
+            >
+                <p class='text-muted'>
+                    Upload a JSON file to populate the Land Manager / Owner, Platform, and Remote
+                    Pilot lists, and to supply per-platform performance specifications. Saved per
+                    CloudTAK user in this browser.
+                </p>
+                <input
+                    ref='configInput'
+                    class='form-control'
+                    type='file'
+                    accept='.json,application/json'
+                    @change='onConfigFile'
+                >
+                <div class='form-hint mt-1'>
+                    Expected keys: <code>landManagers</code>, <code>platforms</code>
+                    (with optional <code>specs</code>), <code>remotePilots</code>.
+                </div>
+
+                <div
+                    v-if='configNotice'
+                    class='alert mt-3'
+                    :class='configError ? "alert-danger" : "alert-success"'
+                >
+                    {{ configNotice }}
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -748,6 +771,7 @@ const reports = ref<PreflightReport[]>(loadPreflightReports());
 const configInput = ref<HTMLInputElement | null>(null);
 const configNotice = ref<string | null>(null);
 const configError = ref(false);
+const configOpen = ref(false);
 
 const weatherLoading = ref(false);
 const weatherError = ref<Error | undefined>();
