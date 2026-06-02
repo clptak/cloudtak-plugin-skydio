@@ -4,7 +4,7 @@ Skydio Plugin for CloudTAK to interface with Skydio's API (https://api.skydio.co
 
 ## Installation
 
-Copy or symlink this repository into CloudTAK's `api/web/plugins/skydio/` before building the web UI. CloudTAK bundles plugins at build time via `import.meta.glob`.
+Copy or symlink this repository into CloudTAK's `api/web/plugins/skydio/` before building the web UI. CloudTAK bundles plugins at build time via `import.meta.glob`. Pre-flight PDF generation uses a vendored `jspdf` bundle under `vendor/` so Docker `WEB_PLUGINS` builds do not require extra host dependencies.
 
 ## Prerequisites
 

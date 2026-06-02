@@ -8,7 +8,7 @@ export default ts.config(
     ...ts.configs.recommended,
     ...eslintPluginVue.configs['flat/recommended'],
     {
-        ignores: ['stubs/**', 'node_modules/**', 'relay-server/**'],
+        ignores: ['stubs/**', 'node_modules/**', 'relay-server/**', 'vendor/**'],
     },
     {
         languageOptions: {
