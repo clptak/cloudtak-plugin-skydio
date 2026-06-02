@@ -42,20 +42,15 @@ async function cloudtakFetch(path: string, init: RequestInit): Promise<Response>
     });
 }
 
-/**
- * Upload the PDF via CloudTAK's attachment API and attach it to the mission.
- * (PUT /api/marti/package expects application/json for ZIP data packages, not raw files.)
- */
-async function uploadAttachmentToMission(
-    missionGuid: string,
-    pdfBlob: Blob,
-    fileName: string,
-): Promise<string> {
+/** Upload raw file bytes to CloudTAK attachment storage; returns content hash. */
+async function uploadAttachment(pdfBlob: Blob, fileName: string): Promise<string> {
+    const safeName = fileName.replace(/^.*[/\\]/, '') || 'preflight-report.pdf';
+    const buffer = await pdfBlob.arrayBuffer();
     const form = new FormData();
-    form.append('file', new File([pdfBlob], fileName, { type: 'application/pdf' }));
+    // Match CloudTAK tests: Blob + explicit filename (not streaming File from fetch).
+    form.append('file', new Blob([buffer], { type: 'application/pdf' }), safeName);
 
-    const attachmentUrl = `/api/attachment?mission=${encodeURIComponent(missionGuid)}`;
-    const res = await cloudtakFetch(attachmentUrl, {
+    const res = await cloudtakFetch('/api/attachment', {
         method: 'PUT',
         body: form,
     });
@@ -81,13 +76,13 @@ async function uploadAttachmentToMission(
                 sessionId: '1ba27b',
                 runId: 'post-fix',
                 hypothesisId: 'fix',
-                location: 'missionAttachment.ts:uploadAttachmentToMission',
+                location: 'missionAttachment.ts:uploadAttachment',
                 message: 'attachment upload failed',
                 data: {
-                    url: attachmentUrl,
+                    url: '/api/attachment',
                     method: 'PUT',
-                    fileName,
-                    blobSize: pdfBlob.size,
+                    fileName: safeName,
+                    blobSize: buffer.byteLength,
                     status: res.status,
                     errBody,
                 },
@@ -115,14 +110,51 @@ async function uploadAttachmentToMission(
             sessionId: '1ba27b',
             runId: 'post-fix',
             hypothesisId: 'fix',
-            location: 'missionAttachment.ts:uploadAttachmentToMission',
+            location: 'missionAttachment.ts:uploadAttachment',
             message: 'attachment upload ok',
-            data: { fileName, hashLen: hash.length },
+            data: { fileName: safeName, hashLen: hash.length },
             timestamp: Date.now(),
         }),
     }).catch(() => {});
     // #endregion
     return hash;
+}
+
+/** Associate a previously uploaded content hash with a mission. */
+async function associateWithMission(missionGuid: string, hash: string): Promise<void> {
+    const res = await cloudtakFetch(
+        `/api/marti/missions/${encodeURIComponent(missionGuid)}/contents`,
+        {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hashes: [hash] }),
+        },
+    );
+    if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        let errBody: unknown = null;
+        try {
+            errBody = errText ? JSON.parse(errText) : null;
+        } catch {
+            errBody = errText ? { raw: errText.slice(0, 500) } : null;
+        }
+        // #region agent log
+        fetch('http://127.0.0.1:7476/ingest/03b14338-79f6-4e2b-aa33-ecb1824b3829', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '1ba27b' },
+            body: JSON.stringify({
+                sessionId: '1ba27b',
+                runId: 'post-fix',
+                hypothesisId: 'mission-assoc',
+                location: 'missionAttachment.ts:associateWithMission',
+                message: 'mission association failed',
+                data: { missionGuidLen: missionGuid.length, hashLen: hash.length, status: res.status, errBody },
+                timestamp: Date.now(),
+            }),
+        }).catch(() => {});
+        // #endregion
+        throw new MissionAttachError(`Mission association failed (${res.status}).`);
+    }
 }
 
 /** Post a log entry referencing the report when a file attachment is not possible. */
@@ -177,7 +209,8 @@ export async function attachReportToMission(
             }),
         }).catch(() => {});
         // #endregion
-        await uploadAttachmentToMission(missionGuid, pdfBlob, fileName);
+        const hash = await uploadAttachment(pdfBlob, fileName);
+        await associateWithMission(missionGuid, hash);
         return { method: 'file', message: `Attached "${fileName}" to the active mission.` };
     } catch (err) {
         if (err instanceof CloudTakAuthError) {
