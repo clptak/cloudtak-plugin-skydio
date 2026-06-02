@@ -47,12 +47,43 @@ async function uploadPackage(pdfBlob: Blob, fileName: string): Promise<string> {
     const form = new FormData();
     form.append('file', new File([pdfBlob], fileName, { type: 'application/pdf' }));
 
-    const res = await cloudtakFetch(`/api/marti/package?name=${encodeURIComponent(fileName)}`, {
+    const packageUrl = `/api/marti/package?name=${encodeURIComponent(fileName)}`;
+    const res = await cloudtakFetch(packageUrl, {
         method: 'PUT',
         body: form,
     });
 
     if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        let errBody: unknown = null;
+        try {
+            errBody = errText ? JSON.parse(errText) : null;
+        } catch {
+            errBody = errText ? { raw: errText.slice(0, 500) } : null;
+        }
+        // #region agent log
+        fetch('http://127.0.0.1:7476/ingest/03b14338-79f6-4e2b-aa33-ecb1824b3829', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '1ba27b' },
+            body: JSON.stringify({
+                sessionId: '1ba27b',
+                runId: 'pre-fix',
+                hypothesisId: 'A-E',
+                location: 'missionAttachment.ts:uploadPackage',
+                message: 'package upload failed',
+                data: {
+                    url: packageUrl,
+                    method: 'PUT',
+                    fileName,
+                    blobSize: pdfBlob.size,
+                    blobType: pdfBlob.type,
+                    status: res.status,
+                    errBody,
+                },
+                timestamp: Date.now(),
+            }),
+        }).catch(() => {});
+        // #endregion
         throw new MissionAttachError(`Package upload failed (${res.status}).`);
     }
 
@@ -116,6 +147,21 @@ export async function attachReportToMission(
     }
 
     try {
+        // #region agent log
+        fetch('http://127.0.0.1:7476/ingest/03b14338-79f6-4e2b-aa33-ecb1824b3829', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '1ba27b' },
+            body: JSON.stringify({
+                sessionId: '1ba27b',
+                runId: 'pre-fix',
+                hypothesisId: 'E',
+                location: 'missionAttachment.ts:attachReportToMission',
+                message: 'attach start',
+                data: { missionGuidLen: missionGuid.length, fileName, blobSize: pdfBlob.size },
+                timestamp: Date.now(),
+            }),
+        }).catch(() => {});
+        // #endregion
         const hash = await uploadPackage(pdfBlob, fileName);
         await associateWithMission(missionGuid, hash);
         return { method: 'file', message: `Attached "${fileName}" to the active mission.` };
