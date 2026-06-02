@@ -6,23 +6,10 @@ Skydio Plugin for CloudTAK to interface with Skydio's API (https://api.skydio.co
 
 Copy or symlink this repository into CloudTAK's `api/web/plugins/skydio/` before building the web UI. CloudTAK bundles plugins at build time via `import.meta.glob`.
 
-### Docker / `WEB_PLUGINS` builds (required for pre-flight PDF)
-
-CloudTAK's image only runs `npm install` in `api/web/`. It does **not** install this plugin's `package.json`, and it lints everything under `plugins/` with CloudTAK's ESLint config. Pre-flight PDFs need `jspdf` in **`api/web/package.json`**, not a vendored copy inside the plugin.
-
-Add this to your CloudTAK `api/web/package.json` dependencies (or run once before the web build):
-
-```bash
-cd api/web && npm install jspdf@^4.2.1 --save
-```
-
-In **tak-stack** (or any custom CloudTAK Dockerfile), add a line **after** plugins are cloned and **before** `npm run lint` / `npm run build`:
-
-```dockerfile
-RUN cd web && npm install jspdf@^4.2.1 --save
-```
-
-Without that, `vue-tsc` fails with `Cannot find module 'jspdf'` on `plugins/skydio/utils/preflightPdf.ts`.
+No CloudTAK or Dockerfile changes are required. Pre-flight PDF generation depends on
+[jsPDF](https://github.com/parallax/jsPDF), which is vendored under `vendor/` so the
+plugin is self-contained through CloudTAK's `lint` → `check` → `build` web pipeline.
+See [`vendor/README.md`](vendor/README.md) for why and how to update it.
 
 ## Prerequisites
 
