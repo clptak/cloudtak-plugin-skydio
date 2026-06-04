@@ -4,6 +4,11 @@ declare module '*.vue' {
     export default component;
 }
 
+declare module '*.svg' {
+    const src: string;
+    export default src;
+}
+
 declare module '@/components/CloudTAK/util/MenuTemplate.vue' {
     import type { DefineComponent } from 'vue';
     const component: DefineComponent<object, object, unknown>;
