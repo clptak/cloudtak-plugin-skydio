@@ -275,13 +275,335 @@ export interface PreflightFormState {
     forecastAttached: string;
     weather: PreflightWeather;
 
-    aviationHazards: string;
-    groundHazards: string;
-    crewEquipmentHazards: string;
+    aviationHazardSelections: string[];
+    aviationHazardsOther: string;
+    groundHazardSelections: string[];
+    groundHazardsOther: string;
+    crewHazardSelections: string[];
+    crewHazardsOther: string;
+    equipmentHazardSelections: string[];
+    equipmentHazardsOther: string;
+    mitigations: string[];
 
     remotePilots: string[];
     visualObservers: string[];
     crewMembers: string;
+}
+
+export interface HazardOption {
+    id: string;
+    label: string;
+    hint?: string;
+}
+
+export const AVIATION_HAZARD_OPTIONS: readonly HazardOption[] = [
+    {
+        id: 'manned-helicopters',
+        label: 'Manned helicopters',
+        hint: 'rescue, medical, law enforcement, park service, news',
+    },
+    {
+        id: 'emergency-response-aircraft',
+        label: 'Emergency response aircraft',
+        hint: 'in-bound SAR helicopters, medevac',
+    },
+    {
+        id: 'fixed-wing-aircraft',
+        label: 'Fixed-wing aircraft',
+        hint: 'general aviation, commercial, military',
+    },
+    {
+        id: 'other-uas-drones',
+        label: 'Other UAS/drones',
+        hint: 'recreational, commercial, military',
+    },
+    {
+        id: 'military-training-routes',
+        label: 'Military training routes and operations',
+    },
+    {
+        id: 'low-level-operations',
+        label: 'Low-level operations',
+        hint: 'crop dusters, pipeline inspection, banner towing',
+    },
+    {
+        id: 'parachute-operations',
+        label: 'Parachute operations',
+        hint: 'skydivers, jumpers',
+    },
+    {
+        id: 'tethered-balloons',
+        label: 'Tethered balloons/aerostats',
+    },
+    {
+        id: 'birds-wildlife',
+        label: 'Birds and wildlife',
+        hint: 'large birds, flocks',
+    },
+    {
+        id: 'other',
+        label: 'Other',
+    },
+];
+
+export function formatAviationHazards(
+    form: Pick<PreflightFormState, 'aviationHazardSelections' | 'aviationHazardsOther'>,
+): string {
+    const labels = form.aviationHazardSelections
+        .map((id) => AVIATION_HAZARD_OPTIONS.find((option) => option.id === id)?.label ?? id);
+    const otherText = form.aviationHazardsOther.trim();
+    if (otherText) {
+        labels.push(`Other: ${otherText}`);
+    }
+    return labels.length > 0 ? labels.join('; ') : '\u2014';
+}
+
+export const GROUND_HAZARD_OPTIONS: readonly HazardOption[] = [
+    {
+        id: 'power-lines',
+        label: 'Power lines and electrical infrastructure',
+    },
+    {
+        id: 'communication-towers',
+        label: 'Communication towers and antenna arrays',
+    },
+    {
+        id: 'structures',
+        label: 'Structures',
+        hint: 'buildings, water towers, cranes, radio masts',
+    },
+    {
+        id: 'dense-vegetation',
+        label: 'Dense vegetation and trees',
+    },
+    {
+        id: 'steep-terrain',
+        label: 'Steep terrain',
+        hint: 'cliffs, canyons, gorges, ravines',
+    },
+    {
+        id: 'water-bodies',
+        label: 'Water bodies',
+        hint: 'lakes, rivers, reservoirs, flash flood zones',
+    },
+    {
+        id: 'roads-traffic',
+        label: 'Roads and vehicle traffic',
+    },
+    {
+        id: 'personnel-flight-area',
+        label: 'Personnel in flight area',
+        hint: 'rescue teams, civilians, bystanders',
+    },
+    {
+        id: 'crowds-spectators',
+        label: 'Crowds and spectators',
+    },
+    {
+        id: 'rough-unstable-ground',
+        label: 'Rough or unstable ground',
+        hint: 'scree, talus, mud, snow',
+    },
+    {
+        id: 'dust-storms',
+        label: 'Dust storms and blowing debris',
+    },
+    {
+        id: 'smoke',
+        label: 'Smoke',
+        hint: 'wildfires, structure fires',
+    },
+    {
+        id: 'tall-brush',
+        label: 'Tall brush and standing crops',
+    },
+    {
+        id: 'underground-utilities',
+        label: 'Underground utilities',
+        hint: 'cables, natural gas, water lines',
+    },
+    {
+        id: 'rf-interference',
+        label: 'RF interference sources',
+        hint: 'radio repeaters, cell towers, radar',
+    },
+    {
+        id: 'hazardous-materials',
+        label: 'Hazardous materials',
+        hint: 'chemical spills, contamination zones',
+    },
+    {
+        id: 'wildlife',
+        label: 'Wildlife',
+        hint: 'agitated animals that could damage aircraft or be injured',
+    },
+    {
+        id: 'blast-zones',
+        label: 'Blast zones or ordnance areas',
+    },
+    {
+        id: 'other',
+        label: 'Other',
+    },
+];
+
+export function formatGroundHazards(
+    form: Pick<PreflightFormState, 'groundHazardSelections' | 'groundHazardsOther'>,
+): string {
+    const labels = form.groundHazardSelections
+        .map((id) => GROUND_HAZARD_OPTIONS.find((option) => option.id === id)?.label ?? id);
+    const otherText = form.groundHazardsOther.trim();
+    if (otherText) {
+        labels.push(`Other: ${otherText}`);
+    }
+    return labels.length > 0 ? labels.join('; ') : '\u2014';
+}
+
+export const CREW_HAZARD_OPTIONS: readonly HazardOption[] = [
+    {
+        id: 'unfamiliar-operating-area',
+        label: 'Unfamiliar operating area',
+        hint: 'new terrain, limited reconnaissance',
+    },
+    {
+        id: 'unfamiliar-equipment',
+        label: 'Unfamiliar equipment',
+        hint: 'new platform, untested configuration',
+    },
+    {
+        id: 'inadequate-training',
+        label: 'Inadequate training',
+        hint: 'new procedures, specialized mission type',
+    },
+    {
+        id: 'impaired-judgment',
+        label: 'Impaired judgment',
+        hint: 'stress, time pressure, decision fatigue',
+    },
+    {
+        id: 'distraction',
+        label: 'Distraction or divided attention',
+    },
+    {
+        id: 'lack-of-coordination',
+        label: 'Lack of crew coordination',
+        hint: 'poor communication with spotter/VO',
+    },
+    {
+        id: 'complacency',
+        label: 'Complacency or overconfidence',
+    },
+    {
+        id: 'illness-impairment',
+        label: 'Illness or physical impairment',
+        hint: 'fever, medication effects, injury',
+    },
+    {
+        id: 'insufficient-rest',
+        label: 'Insufficient rest or fatigue',
+        hint: 'extended ops, early callouts',
+    },
+    {
+        id: 'other',
+        label: 'Other',
+    },
+];
+
+export function formatCrewHazards(
+    form: Pick<PreflightFormState, 'crewHazardSelections' | 'crewHazardsOther'>,
+): string {
+    const labels = form.crewHazardSelections
+        .map((id) => CREW_HAZARD_OPTIONS.find((option) => option.id === id)?.label ?? id);
+    const otherText = form.crewHazardsOther.trim();
+    if (otherText) {
+        labels.push(`Other: ${otherText}`);
+    }
+    return labels.length > 0 ? labels.join('; ') : '\u2014';
+}
+
+export const EQUIPMENT_HAZARD_OPTIONS: readonly HazardOption[] = [
+    {
+        id: 'low-battery-health',
+        label: 'Low battery health or cycle count',
+    },
+    {
+        id: 'overheating',
+        label: 'Overheating',
+        hint: 'electronics, battery, motor under load',
+    },
+    {
+        id: 'freezing-cold-soak',
+        label: 'Freezing/cold soak',
+        hint: 'battery performance loss, condensation on startup',
+    },
+    {
+        id: 'moisture-condensation',
+        label: 'Moisture and condensation',
+        hint: 'fog, rain, high humidity',
+    },
+    {
+        id: 'firmware-updates',
+        label: 'Firmware/software updates',
+        hint: 'untested versions, partial installs',
+    },
+    {
+        id: 'outdated-flight-software',
+        label: 'Outdated or corrupted flight control software',
+    },
+    {
+        id: 'gimbal-calibration',
+        label: 'Gimbal/sensor calibration issues',
+    },
+    {
+        id: 'worn-components',
+        label: 'Worn or degraded components',
+        hint: 'propellers, bearings, motors',
+    },
+    {
+        id: 'electromagnetic-interference',
+        label: 'Electromagnetic interference',
+        hint: 'from comms or RF sources',
+    },
+    {
+        id: 'gps-magnetometer-interference',
+        label: 'GPS/magnetometer interference or signal loss',
+    },
+    {
+        id: 'untested-modifications',
+        label: 'Untested modifications or payloads',
+    },
+    {
+        id: 'lack-of-spare-parts',
+        label: 'Lack of spare parts or backup equipment',
+    },
+    {
+        id: 'antenna-damage',
+        label: 'Antenna damage or loose connections',
+    },
+    {
+        id: 'other',
+        label: 'Other',
+    },
+];
+
+export function formatEquipmentHazards(
+    form: Pick<PreflightFormState, 'equipmentHazardSelections' | 'equipmentHazardsOther'>,
+): string {
+    const labels = form.equipmentHazardSelections
+        .map((id) => EQUIPMENT_HAZARD_OPTIONS.find((option) => option.id === id)?.label ?? id);
+    const otherText = form.equipmentHazardsOther.trim();
+    if (otherText) {
+        labels.push(`Other: ${otherText}`);
+    }
+    return labels.length > 0 ? labels.join('; ') : '\u2014';
+}
+
+export const PREFLIGHT_MAX_MITIGATIONS = 10;
+
+export function formatMitigations(mitigations: string[]): string {
+    const items = mitigations.map((entry) => entry.trim()).filter(Boolean);
+    if (items.length === 0) return '\u2014';
+    return items.map((entry, index) => `${index + 1}. ${entry}`).join('; ');
 }
 
 /** A generated report stored in the reports list. */

@@ -27,7 +27,7 @@
                         </option>
                     </select>
                     <div class='form-hint'>
-                        Hold Cmd/Ctrl to select multiple vehicles. Load vehicles on the Vehicles tab first.
+                        Hold Cmd/Ctrl to select multiple vehicles. Load vehicles in Settings first.
                     </div>
 
                     <TablerInput
@@ -56,6 +56,124 @@
                 </div>
             </div>
         </form>
+
+        <div class='card mb-3'>
+            <div class='card-header'>
+                <div class='card-title'>
+                    Mission Planning
+                </div>
+            </div>
+            <div class='card-body'>
+                <p class='text-muted'>
+                    Select a feature on the map, then import it here. A Polygon generates a
+                    Skydio Map Capture mission (download); a LineString generates a waypoint
+                    flight you can send to Skydio or download.
+                </p>
+
+                <div class='mb-3'>
+                    <span class='text-muted'>Current selection: </span>
+                    <span>{{ selectionLabel }}</span>
+                </div>
+
+                <button
+                    type='button'
+                    class='btn btn-primary'
+                    :disabled='!canImport'
+                    @click='openModal'
+                >
+                    Import Selected Map Feature
+                </button>
+
+                <div
+                    v-if='missionNotice'
+                    class='alert mt-3'
+                    :class='missionNoticeIsError ? "alert-danger" : "alert-info"'
+                >
+                    {{ missionNotice }}
+                </div>
+            </div>
+        </div>
+
+        <div
+            v-if='modalOpen'
+            class='modal modal-blur show d-block'
+            tabindex='-1'
+            role='dialog'
+            style='background: rgba(0, 0, 0, 0.5);'
+        >
+            <div
+                class='modal-dialog modal-dialog-centered'
+                role='document'
+            >
+                <div class='modal-content'>
+                    <div class='modal-header'>
+                        <h5 class='modal-title'>
+                            {{ modalTitle }}
+                        </h5>
+                        <button
+                            type='button'
+                            class='btn-close'
+                            aria-label='Close'
+                            @click='closeModal'
+                        />
+                    </div>
+                    <div class='modal-body'>
+                        <TablerInput
+                            v-model='missionForm.displayName'
+                            label='Mission Name'
+                            placeholder='Mission name'
+                        />
+                        <TablerInput
+                            v-model.number='missionForm.areaScanHeightFt'
+                            class='mt-3'
+                            type='number'
+                            label='Area Scan Height (Above Takeoff) — ft'
+                        />
+                        <template v-if='missionType === "mapCapture"'>
+                            <TablerInput
+                                v-model.number='missionForm.areaOverlap'
+                                class='mt-3'
+                                type='number'
+                                label='Set Overlap Percentage'
+                            />
+                            <TablerInput
+                                v-model.number='missionForm.areaSidelap'
+                                class='mt-3'
+                                type='number'
+                                label='Set Side Overlap Percentage'
+                            />
+                        </template>
+                    </div>
+                    <div class='modal-footer'>
+                        <button
+                            type='button'
+                            class='btn btn-secondary'
+                            @click='closeModal'
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            v-if='missionType === "waypoint"'
+                            type='button'
+                            class='btn btn-primary'
+                            :disabled='!canGenerate || sending'
+                            @click='sendToSkydio'
+                        >
+                            {{ sending ? 'Sending…' : 'Send to Skydio' }}
+                        </button>
+                        <button
+                            type='button'
+                            class='btn'
+                            :class='missionType === "waypoint" ? "btn-outline-primary" : "btn-primary"'
+                            :disabled='!canGenerate || sending'
+                            @click='generateAndDownload'
+                        >
+                            Download JSON
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div
             v-if='!apiKey'
@@ -204,15 +322,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { TablerInput, TablerLoading, TablerAlert } from '@tak-ps/vue-tabler';
-import { getFlightTelemetry, listFlights } from '../api/client';
+import { createMissionTemplate, getFlightTelemetry, listFlights } from '../api/client';
 import { ProxyError } from '../api/proxy';
 import type { SkydioFlight, SkydioVehicle } from '../types';
 import type { Feature } from '../../../src/types.ts';
 import { useMapStore } from '../../../src/stores/map.ts';
 import { normalize_geojson } from '@tak-ps/node-cot/normalize_geojson';
 import { resolveSkydioTelemetryRelayUrl } from '../lib/sse-url';
+import {
+    FEET_TO_METERS,
+    buildMapCaptureMission,
+    buildWaypointMission,
+    buildWaypointTemplate,
+    downloadMissionJson,
+    lineStringCoords,
+    polygonOuterRing,
+} from '../utils/skydioMission';
 import {
     downloadGeoJson,
     flightLabel,
@@ -226,6 +353,7 @@ const props = defineProps<{
     vehicles: SkydioVehicle[];
     telemetryRelayUrl: string;
     skydioSseUrl: string;
+    activeFeature: Feature | null;
 }>();
 
 function effectiveTelemetryRelayUrl(): string {
@@ -253,6 +381,192 @@ const elevationSource = ref<TelemetryElevationSource>('height_above_takeoff');
 const error = ref<Error | undefined>();
 const downloadError = ref<Error | undefined>();
 const importError = ref<Error | undefined>();
+
+const modalOpen = ref(false);
+const missionNotice = ref<string | null>(null);
+const missionNoticeIsError = ref(false);
+const sending = ref(false);
+const missionForm = reactive({
+    displayName: '',
+    areaScanHeightFt: 300,
+    areaOverlap: 50,
+    areaSidelap: 30,
+});
+
+type MissionType = 'mapCapture' | 'waypoint';
+
+interface SelectedInfo {
+    feature: Feature;
+    geometryType: string;
+    callsign: string;
+}
+
+const selected = computed<SelectedInfo | null>(() => {
+    const feature = props.activeFeature;
+    if (!feature || !feature.geometry) return null;
+
+    const callsign = typeof feature.properties?.callsign === 'string'
+        ? feature.properties.callsign
+        : '';
+
+    return {
+        feature,
+        geometryType: feature.geometry.type,
+        callsign,
+    };
+});
+
+const missionType = computed<MissionType | null>(() => {
+    switch (selected.value?.geometryType) {
+        case 'Polygon': return 'mapCapture';
+        case 'LineString': return 'waypoint';
+        default: return null;
+    }
+});
+
+const selectionLabel = computed(() => {
+    const info = selected.value;
+    if (!info) return 'No map feature captured — click a feature on the map.';
+    const name = info.callsign || '(unnamed)';
+    return `${name} — ${info.geometryType}`;
+});
+
+const canImport = computed(() => missionType.value !== null);
+
+const canGenerate = computed(() => Boolean(missionForm.displayName.trim()));
+
+const modalTitle = computed(() =>
+    missionType.value === 'waypoint' ? 'New Waypoint Flight' : 'New Map Capture Mission');
+
+function openModal(): void {
+    missionNotice.value = null;
+    missionNoticeIsError.value = false;
+
+    const info = selected.value;
+    if (!info) {
+        missionNotice.value = 'Click a feature on the map first.';
+        missionNoticeIsError.value = true;
+        return;
+    }
+
+    if (missionType.value === null) {
+        missionNotice.value = info.geometryType === 'Point'
+            ? 'Point flights are not supported yet. Select a Polygon (Map Capture) or LineString (waypoint flight).'
+            : `Unsupported geometry "${info.geometryType}". Select a Polygon or LineString.`;
+        missionNoticeIsError.value = true;
+        return;
+    }
+
+    missionForm.displayName = info.callsign
+        || (missionType.value === 'waypoint' ? 'Skydio Waypoint Flight' : 'Skydio Map Capture');
+    missionForm.areaScanHeightFt = 300;
+    missionForm.areaOverlap = 50;
+    missionForm.areaSidelap = 30;
+    modalOpen.value = true;
+}
+
+function closeModal(): void {
+    modalOpen.value = false;
+}
+
+function safeFileName(displayName: string): string {
+    return displayName.replace(/[^a-z0-9_-]+/gi, '_') || 'skydio-mission';
+}
+
+function generateAndDownload(): void {
+    const info = selected.value;
+    if (!info) {
+        missionNotice.value = 'Map selection changed — re-select a feature and try again.';
+        missionNoticeIsError.value = true;
+        modalOpen.value = false;
+        return;
+    }
+
+    const displayName = missionForm.displayName.trim();
+    let mission: Record<string, unknown>;
+
+    if (missionType.value === 'mapCapture') {
+        const ring = polygonOuterRing(info.feature.geometry);
+        if (!ring) {
+            missionNotice.value = 'Selected feature is not a valid Polygon.';
+            missionNoticeIsError.value = true;
+            modalOpen.value = false;
+            return;
+        }
+        mission = buildMapCaptureMission({
+            displayName,
+            areaScanHeightMeters: missionForm.areaScanHeightFt * FEET_TO_METERS,
+            areaOverlap: missionForm.areaOverlap,
+            areaSidelap: missionForm.areaSidelap,
+            ring,
+        });
+    } else {
+        const line = lineStringCoords(info.feature.geometry);
+        if (!line) {
+            missionNotice.value = 'Selected feature is not a valid LineString.';
+            missionNoticeIsError.value = true;
+            modalOpen.value = false;
+            return;
+        }
+        mission = buildWaypointMission({
+            displayName,
+            waypointZMeters: missionForm.areaScanHeightFt * FEET_TO_METERS,
+            line,
+        });
+    }
+
+    const safeName = safeFileName(displayName);
+    downloadMissionJson(mission, `${safeName}.json`);
+
+    modalOpen.value = false;
+    missionNotice.value = `Downloaded "${safeName}.json". Import it into Skydio Cloud.`;
+    missionNoticeIsError.value = false;
+}
+
+async function sendToSkydio(): Promise<void> {
+    const info = selected.value;
+    if (!info || missionType.value !== 'waypoint') {
+        missionNotice.value = 'Map selection changed — re-select a LineString and try again.';
+        missionNoticeIsError.value = true;
+        modalOpen.value = false;
+        return;
+    }
+
+    const line = lineStringCoords(info.feature.geometry);
+    if (!line) {
+        missionNotice.value = 'Selected feature is not a valid LineString.';
+        missionNoticeIsError.value = true;
+        return;
+    }
+
+    if (!props.apiKey.trim()) {
+        missionNotice.value = 'Add your Skydio API key in Settings before sending.';
+        missionNoticeIsError.value = true;
+        return;
+    }
+
+    sending.value = true;
+    missionNotice.value = null;
+
+    try {
+        const template = await createMissionTemplate(props.apiKey, buildWaypointTemplate({
+            name: missionForm.displayName.trim(),
+            waypointZFeet: missionForm.areaScanHeightFt,
+            line,
+        }));
+
+        modalOpen.value = false;
+        missionNotice.value = `Sent to Skydio — created mission template${template.uuid ? ` (${template.uuid})` : ''}.`;
+        missionNoticeIsError.value = false;
+    } catch (err) {
+        missionNotice.value = err instanceof ProxyError || err instanceof Error
+            ? err.message
+            : 'Failed to send mission to Skydio';
+        missionNoticeIsError.value = true;
+    } finally {
+        sending.value = false;
+    }
+}
 
 function toError(err: unknown, fallback: string): Error {
     if (err instanceof ProxyError || err instanceof Error) {

@@ -97,7 +97,7 @@
             v-else-if='sseConfigured && !apiKeyConfigured'
             class='alert alert-warning'
         >
-            SSE alerts are configured. Add a Skydio API key in Settings to register webhooks in the Webhooks tab.
+            SSE alerts are configured. Add a Skydio API key in Settings to register webhooks below.
         </div>
 
         <div

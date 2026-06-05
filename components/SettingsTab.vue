@@ -1,6 +1,41 @@
 <template>
     <div class='col-12 py-3'>
         <div class='card mb-3'>
+            <div
+                class='card-header'
+                style='cursor: pointer;'
+                @click='vehiclesOpen = !vehiclesOpen'
+            >
+                <div class='card-title'>
+                    Vehicles
+                </div>
+                <div class='card-actions d-flex align-items-center gap-2'>
+                    <button
+                        type='button'
+                        class='btn btn-sm btn-primary'
+                        :disabled='vehiclesLoading || !settings.apiKey.trim()'
+                        @click.stop='emit("refreshVehicles")'
+                    >
+                        Refresh Vehicles
+                    </button>
+                    <CollapseChevron :open='vehiclesOpen' />
+                </div>
+            </div>
+            <div
+                v-if='vehiclesOpen'
+                class='card-body'
+            >
+                <VehiclesTab
+                    :api-key='settings.apiKey'
+                    :vehicles='vehicles'
+                    :loading='vehiclesLoading'
+                    :cached='vehiclesCached'
+                    :error='vehiclesError'
+                />
+            </div>
+        </div>
+
+        <div class='card mb-3'>
             <div class='card-header'>
                 <div class='card-title'>
                     Skydio API Settings
@@ -28,7 +63,7 @@
             </div>
         </div>
 
-        <div class='card'>
+        <div class='card mb-3'>
             <div class='card-header'>
                 <div class='card-title'>
                     Webhook SSE (Authentik)
@@ -79,7 +114,7 @@
                     class='mt-3'
                     label='Skydio Webhook URL'
                     placeholder='https://webhook.example.com/api/skydio'
-                    description='URL Skydio Cloud should POST alerts to (used on the Webhooks tab). Whitelist this host in Plugin Proxy.'
+                    description='URL Skydio Cloud should POST alerts to (used when registering webhooks below). Whitelist this host in Plugin Proxy.'
                 />
 
                 <label class='form-check mt-3'>
@@ -120,6 +155,30 @@
             </div>
         </div>
 
+        <div class='card mb-3'>
+            <div
+                class='card-header'
+                style='cursor: pointer;'
+                @click='webhooksOpen = !webhooksOpen'
+            >
+                <div class='card-title'>
+                    Webhooks
+                </div>
+                <div class='card-actions'>
+                    <CollapseChevron :open='webhooksOpen' />
+                </div>
+            </div>
+            <div
+                v-if='webhooksOpen'
+                class='card-body'
+            >
+                <WebhooksTab
+                    :api-key='settings.apiKey'
+                    :settings='settings'
+                />
+            </div>
+        </div>
+
         <div
             v-if='saved'
             class='alert alert-success mt-3'
@@ -134,20 +193,30 @@ import { computed, reactive, ref, watch } from 'vue';
 import { TablerInput } from '@tak-ps/vue-tabler';
 import { fetchClientCredentialsToken } from '../api/authentik';
 import { mergeSkydioSettings } from '../storage/settings';
-import type { SkydioSettings } from '../types';
+import type { SkydioSettings, SkydioVehicle } from '../types';
+import CollapseChevron from './CollapseChevron.vue';
+import VehiclesTab from './VehiclesTab.vue';
+import WebhooksTab from './WebhooksTab.vue';
 
 const props = defineProps<{
     settings: SkydioSettings;
+    vehicles: SkydioVehicle[];
+    vehiclesLoading: boolean;
+    vehiclesCached: boolean;
+    vehiclesError?: Error;
 }>();
 
 const emit = defineEmits<{
     save: [settings: SkydioSettings];
+    refreshVehicles: [];
 }>();
 
 const local = reactive<SkydioSettings>({ ...props.settings });
 const saved = ref(false);
 const testing = ref(false);
 const testResult = ref<{ ok: boolean; message: string } | null>(null);
+const vehiclesOpen = ref(false);
+const webhooksOpen = ref(false);
 
 function effectiveSecret(): string {
     return local.oauthClientSecret.trim() || props.settings.oauthClientSecret.trim();

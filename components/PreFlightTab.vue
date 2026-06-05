@@ -2,12 +2,22 @@
     <div class='col-12 py-3'>
         <!-- Location / Airspace / Platform -->
         <div class='card mb-3'>
-            <div class='card-header'>
+            <div
+                class='card-header'
+                style='cursor: pointer;'
+                @click='locationOpen = !locationOpen'
+            >
                 <div class='card-title'>
                     Location | Airspace | Platform
                 </div>
+                <div class='card-actions'>
+                    <CollapseChevron :open='locationOpen' />
+                </div>
             </div>
-            <div class='card-body'>
+            <div
+                v-if='locationOpen'
+                class='card-body'
+            >
                 <div class='mb-3'>
                     <span class='text-muted'>Map point: </span>
                     <span>{{ form.location || 'No point selected — click a point on the map.' }}</span>
@@ -15,7 +25,7 @@
                         type='button'
                         class='btn btn-sm btn-outline-primary ms-2'
                         :disabled='!hasMapPoint'
-                        @click='useMapPoint'
+                        @click.stop='useMapPoint'
                     >
                         Use Map Selection
                     </button>
@@ -105,12 +115,22 @@
 
         <!-- Flight Type -->
         <div class='card mb-3'>
-            <div class='card-header'>
+            <div
+                class='card-header'
+                style='cursor: pointer;'
+                @click='flightTypeOpen = !flightTypeOpen'
+            >
                 <div class='card-title'>
                     Flight Type
                 </div>
+                <div class='card-actions'>
+                    <CollapseChevron :open='flightTypeOpen' />
+                </div>
             </div>
-            <div class='card-body'>
+            <div
+                v-if='flightTypeOpen'
+                class='card-body'
+            >
                 <label class='form-label'>Flight Category</label>
                 <select
                     v-model='form.flightCategory'
@@ -254,22 +274,30 @@
 
         <!-- Weather -->
         <div class='card mb-3'>
-            <div class='card-header'>
+            <div
+                class='card-header'
+                style='cursor: pointer;'
+                @click='weatherOpen = !weatherOpen'
+            >
                 <div class='card-title'>
                     Weather
                 </div>
-                <div class='card-actions'>
+                <div class='card-actions d-flex align-items-center gap-2'>
                     <button
                         type='button'
                         class='btn btn-sm btn-primary'
                         :disabled='!hasMapPoint || weatherLoading'
-                        @click='fetchWeather'
+                        @click.stop='fetchWeather'
                     >
                         {{ weatherLoading ? 'Fetching…' : 'Auto-fill from NWS' }}
                     </button>
+                    <CollapseChevron :open='weatherOpen' />
                 </div>
             </div>
-            <div class='card-body'>
+            <div
+                v-if='weatherOpen'
+                class='card-body'
+            >
                 <p class='text-muted'>
                     Select a point on the map, then auto-fill current conditions from the National
                     Weather Service. US coverage only; all fields can be edited.
@@ -427,37 +455,258 @@
 
         <!-- Operational Hazards -->
         <div class='card mb-3'>
-            <div class='card-header'>
+            <div
+                class='card-header'
+                style='cursor: pointer;'
+                @click='hazardsOpen = !hazardsOpen'
+            >
                 <div class='card-title'>
                     Operational Hazards
                 </div>
+                <div class='card-actions'>
+                    <CollapseChevron :open='hazardsOpen' />
+                </div>
             </div>
-            <div class='card-body'>
-                <TablerInput
-                    v-model='form.aviationHazards'
-                    label='Aviation Hazards'
-                />
-                <TablerInput
-                    v-model='form.groundHazards'
-                    class='mt-3'
-                    label='Ground-based Hazards'
-                />
-                <TablerInput
-                    v-model='form.crewEquipmentHazards'
-                    class='mt-3'
-                    label='Crew / Equipment Hazards'
-                />
+            <div
+                v-if='hazardsOpen'
+                class='card-body d-flex flex-column gap-3'
+            >
+                <div class='operational-hazard-section border rounded p-3'>
+                    <div class='operational-hazard-section-title mb-2'>
+                        Aviation Hazards
+                    </div>
+                    <div class='row g-2'>
+                        <div
+                            v-for='option in AVIATION_HAZARD_OPTIONS'
+                            :key='option.id'
+                            class='col-12 col-sm-6'
+                        >
+                            <div class='d-flex align-items-start gap-1 hazard-option'>
+                                <label class='form-check mb-0 flex-grow-1'>
+                                    <input
+                                        v-model='form.aviationHazardSelections'
+                                        class='form-check-input'
+                                        type='checkbox'
+                                        :value='option.id'
+                                    >
+                                    <span class='form-check-label'>{{ option.label }}</span>
+                                </label>
+                                <button
+                                    v-if='option.hint'
+                                    type='button'
+                                    class='btn btn-link btn-sm p-0 hazard-info flex-shrink-0'
+                                    :aria-label='`More information about ${option.label}`'
+                                    @click='openHazardHint(option)'
+                                >
+                                    <IconInfoCircle
+                                        :size='14'
+                                        stroke='1.5'
+                                    />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <TablerInput
+                        v-model='form.aviationHazardsOther'
+                        class='mt-3 mb-0'
+                        label='Other:'
+                    />
+                </div>
+
+                <div class='operational-hazard-section border rounded p-3'>
+                    <div class='operational-hazard-section-title mb-2'>
+                        Ground-based Hazards
+                    </div>
+                    <div class='row g-2'>
+                        <div
+                            v-for='option in GROUND_HAZARD_OPTIONS'
+                            :key='option.id'
+                            class='col-12 col-sm-6'
+                        >
+                            <div class='d-flex align-items-start gap-1 hazard-option'>
+                                <label class='form-check mb-0 flex-grow-1'>
+                                    <input
+                                        v-model='form.groundHazardSelections'
+                                        class='form-check-input'
+                                        type='checkbox'
+                                        :value='option.id'
+                                    >
+                                    <span class='form-check-label'>{{ option.label }}</span>
+                                </label>
+                                <button
+                                    v-if='option.hint'
+                                    type='button'
+                                    class='btn btn-link btn-sm p-0 hazard-info flex-shrink-0'
+                                    :aria-label='`More information about ${option.label}`'
+                                    @click='openHazardHint(option)'
+                                >
+                                    <IconInfoCircle
+                                        :size='14'
+                                        stroke='1.5'
+                                    />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <TablerInput
+                        v-model='form.groundHazardsOther'
+                        class='mt-3 mb-0'
+                        label='Other:'
+                    />
+                </div>
+
+                <div class='operational-hazard-section border rounded p-3'>
+                    <div class='operational-hazard-section-title mb-2'>
+                        Crew/Operator
+                    </div>
+                    <div class='row g-2'>
+                        <div
+                            v-for='option in CREW_HAZARD_OPTIONS'
+                            :key='option.id'
+                            class='col-12 col-sm-6'
+                        >
+                            <div class='d-flex align-items-start gap-1 hazard-option'>
+                                <label class='form-check mb-0 flex-grow-1'>
+                                    <input
+                                        v-model='form.crewHazardSelections'
+                                        class='form-check-input'
+                                        type='checkbox'
+                                        :value='option.id'
+                                    >
+                                    <span class='form-check-label'>{{ option.label }}</span>
+                                </label>
+                                <button
+                                    v-if='option.hint'
+                                    type='button'
+                                    class='btn btn-link btn-sm p-0 hazard-info flex-shrink-0'
+                                    :aria-label='`More information about ${option.label}`'
+                                    @click='openHazardHint(option)'
+                                >
+                                    <IconInfoCircle
+                                        :size='14'
+                                        stroke='1.5'
+                                    />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <TablerInput
+                        v-model='form.crewHazardsOther'
+                        class='mt-3 mb-0'
+                        label='Other:'
+                    />
+                </div>
+
+                <div class='operational-hazard-section border rounded p-3'>
+                    <div class='operational-hazard-section-title mb-2'>
+                        Equipment Hazards
+                    </div>
+                    <div class='row g-2'>
+                        <div
+                            v-for='option in EQUIPMENT_HAZARD_OPTIONS'
+                            :key='option.id'
+                            class='col-12 col-sm-6'
+                        >
+                            <div class='d-flex align-items-start gap-1 hazard-option'>
+                                <label class='form-check mb-0 flex-grow-1'>
+                                    <input
+                                        v-model='form.equipmentHazardSelections'
+                                        class='form-check-input'
+                                        type='checkbox'
+                                        :value='option.id'
+                                    >
+                                    <span class='form-check-label'>{{ option.label }}</span>
+                                </label>
+                                <button
+                                    v-if='option.hint'
+                                    type='button'
+                                    class='btn btn-link btn-sm p-0 hazard-info flex-shrink-0'
+                                    :aria-label='`More information about ${option.label}`'
+                                    @click='openHazardHint(option)'
+                                >
+                                    <IconInfoCircle
+                                        :size='14'
+                                        stroke='1.5'
+                                    />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <TablerInput
+                        v-model='form.equipmentHazardsOther'
+                        class='mt-3 mb-0'
+                        label='Other:'
+                    />
+                </div>
+
+                <div class='operational-hazard-section border rounded p-3'>
+                    <div class='operational-hazard-section-title mb-2'>
+                        Mitigations
+                    </div>
+                    <MitigationsList
+                        v-model='form.mitigations'
+                        :max='PREFLIGHT_MAX_MITIGATIONS'
+                    />
+                </div>
+            </div>
+        </div>
+
+        <div
+            v-if='hazardHintOpen'
+            class='modal modal-blur show d-block'
+            tabindex='-1'
+            role='dialog'
+            aria-modal='true'
+            :aria-labelledby='hazardHintTitleId'
+            style='background: rgba(0, 0, 0, 0.5);'
+            @click.self='closeHazardHint'
+        >
+            <div
+                class='modal-dialog modal-dialog-centered modal-sm'
+                role='document'
+            >
+                <div class='modal-content'>
+                    <div class='modal-header'>
+                        <h5
+                            :id='hazardHintTitleId'
+                            class='modal-title'
+                        >
+                            {{ hazardHintTitle }}
+                        </h5>
+                        <button
+                            type='button'
+                            class='btn-close'
+                            aria-label='Close'
+                            @click='closeHazardHint'
+                        />
+                    </div>
+                    <div class='modal-body'>
+                        <p class='mb-0'>
+                            {{ hazardHintText }}
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Logistics -->
         <div class='card mb-3'>
-            <div class='card-header'>
+            <div
+                class='card-header'
+                style='cursor: pointer;'
+                @click='logisticsOpen = !logisticsOpen'
+            >
                 <div class='card-title'>
                     Logistics
                 </div>
+                <div class='card-actions'>
+                    <CollapseChevron :open='logisticsOpen' />
+                </div>
             </div>
-            <div class='card-body'>
+            <div
+                v-if='logisticsOpen'
+                class='card-body'
+            >
                 <label class='form-label'>Remote Pilot(s)</label>
                 <div
                     v-if='config.remotePilots.length === 0'
@@ -498,12 +747,22 @@
 
         <!-- Generate -->
         <div class='card mb-3'>
-            <div class='card-header'>
+            <div
+                class='card-header'
+                style='cursor: pointer;'
+                @click='generateOpen = !generateOpen'
+            >
                 <div class='card-title'>
                     Generate Report
                 </div>
+                <div class='card-actions'>
+                    <CollapseChevron :open='generateOpen' />
+                </div>
             </div>
-            <div class='card-body'>
+            <div
+                v-if='generateOpen'
+                class='card-body'
+            >
                 <TablerInput
                     v-model='reportTitle'
                     label='Report Title'
@@ -527,12 +786,22 @@
 
         <!-- Reports list -->
         <div class='card'>
-            <div class='card-header'>
+            <div
+                class='card-header'
+                style='cursor: pointer;'
+                @click='reportsOpen = !reportsOpen'
+            >
                 <div class='card-title'>
                     Reports
                 </div>
+                <div class='card-actions'>
+                    <CollapseChevron :open='reportsOpen' />
+                </div>
             </div>
-            <div class='card-body'>
+            <div
+                v-if='reportsOpen'
+                class='card-body'
+            >
                 <p
                     v-if='reports.length === 0'
                     class='text-muted mb-0'
@@ -616,20 +885,7 @@
                     Configuration
                 </div>
                 <div class='card-actions'>
-                    <svg
-                        xmlns='http://www.w3.org/2000/svg'
-                        width='18'
-                        height='18'
-                        viewBox='0 0 24 24'
-                        fill='none'
-                        stroke='currentColor'
-                        stroke-width='2'
-                        stroke-linecap='round'
-                        stroke-linejoin='round'
-                        :style='{ transition: "transform 0.2s", transform: configOpen ? "rotate(180deg)" : "rotate(0deg)" }'
-                    >
-                        <polyline points='6 9 12 15 18 9' />
-                    </svg>
+                    <CollapseChevron :open='configOpen' />
                 </div>
             </div>
             <div
@@ -667,10 +923,19 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
+import { IconInfoCircle } from '@tabler/icons-vue';
 import { TablerInput, TablerAlert } from '@tak-ps/vue-tabler';
+import CollapseChevron from './CollapseChevron.vue';
+import MitigationsList from './MitigationsList.vue';
 import type { Feature } from '../../../src/types.ts';
 import {
+    AVIATION_HAZARD_OPTIONS,
+    CREW_HAZARD_OPTIONS,
+    EQUIPMENT_HAZARD_OPTIONS,
+    GROUND_HAZARD_OPTIONS,
+    PREFLIGHT_MAX_MITIGATIONS,
     EMPTY_WEATHER,
+    type HazardOption,
     type PerformanceStatus,
     type PreflightConfig,
     type PreflightFormState,
@@ -768,9 +1033,15 @@ function createForm(): PreflightFormState {
         dataCollectionOther: '',
         forecastAttached: '',
         weather: { ...EMPTY_WEATHER },
-        aviationHazards: '',
-        groundHazards: '',
-        crewEquipmentHazards: '',
+        aviationHazardSelections: [],
+        aviationHazardsOther: '',
+        groundHazardSelections: [],
+        groundHazardsOther: '',
+        crewHazardSelections: [],
+        crewHazardsOther: '',
+        equipmentHazardSelections: [],
+        equipmentHazardsOther: '',
+        mitigations: [],
         remotePilots: [],
         visualObservers: ['', '', '', '', ''],
         crewMembers: '',
@@ -784,7 +1055,29 @@ const reports = ref<PreflightReport[]>(loadPreflightReports());
 const configInput = ref<HTMLInputElement | null>(null);
 const configNotice = ref<string | null>(null);
 const configError = ref(false);
+const locationOpen = ref(true);
 const configOpen = ref(false);
+const flightTypeOpen = ref(false);
+const weatherOpen = ref(false);
+const hazardsOpen = ref(false);
+const logisticsOpen = ref(false);
+const generateOpen = ref(false);
+const reportsOpen = ref(false);
+
+const hazardHintOpen = ref(false);
+const hazardHintTitle = ref('');
+const hazardHintText = ref('');
+const hazardHintTitleId = 'operational-hazard-hint-title';
+
+function openHazardHint(option: HazardOption): void {
+    hazardHintTitle.value = option.label;
+    hazardHintText.value = option.hint ?? '';
+    hazardHintOpen.value = true;
+}
+
+function closeHazardHint(): void {
+    hazardHintOpen.value = false;
+}
 
 const weatherLoading = ref(false);
 const weatherError = ref<Error | undefined>();
@@ -999,3 +1292,35 @@ onMounted(() => {
     useMapPoint();
 });
 </script>
+
+<style scoped>
+.operational-hazard-section-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    opacity: 0.85;
+}
+
+.hazard-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    margin-top: -0.125rem;
+    line-height: 1;
+    opacity: 0.65;
+}
+
+.hazard-info:hover,
+.hazard-info:focus {
+    opacity: 1;
+}
+
+.hazard-option {
+    min-height: 1.5rem;
+}
+</style>

@@ -1,21 +1,5 @@
 <template>
-    <div class='col-12 py-3'>
-        <div class='d-flex align-items-center mb-3'>
-            <div class='h3 mb-0'>
-                Vehicles
-            </div>
-            <div class='ms-auto'>
-                <button
-                    type='button'
-                    class='btn btn-primary'
-                    :disabled='loading || !apiKey'
-                    @click='emit("refresh")'
-                >
-                    Refresh Vehicles
-                </button>
-            </div>
-        </div>
-
+    <div>
         <div
             v-if='!apiKey'
             class='alert alert-warning'
@@ -89,9 +73,5 @@ defineProps<{
     loading: boolean;
     cached: boolean;
     error?: Error;
-}>();
-
-const emit = defineEmits<{
-    refresh: [];
 }>();
 </script>

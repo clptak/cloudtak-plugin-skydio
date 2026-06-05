@@ -1,14 +1,10 @@
 <template>
-    <div class='col-12 py-3'>
-        <div class='card mb-3'>
-            <div class='card-body'>
-                <p class='text-muted mb-0'>
-                    Register Skydio webhooks to deliver alerts to the webhook server.
-                    The plugin receives events in real time via SSE when OAuth credentials
-                    are configured in Settings.
-                </p>
-            </div>
-        </div>
+    <div>
+        <p class='text-muted mb-3'>
+            Register Skydio webhooks to deliver alerts to the webhook server.
+            The plugin receives events in real time via SSE when OAuth credentials
+            are configured above.
+        </p>
 
         <div
             v-if='!apiKey'

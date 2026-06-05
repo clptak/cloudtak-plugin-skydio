@@ -1,12 +1,46 @@
 <template>
     <div class='col-12 py-3'>
-        <TablerPillGroup
-            v-model='activeTab'
-            :options='tabs'
-        />
+        <div
+            class='btn-group mb-3 w-100 skydio-tab-group'
+            role='group'
+            aria-label='Skydio plugin tabs'
+        >
+            <button
+                v-for='tab in tabs'
+                :key='tab.value'
+                type='button'
+                class='btn skydio-tab-btn d-inline-flex align-items-center justify-content-center'
+                :class='activeTab === tab.value ? "btn-primary" : "btn-outline-primary"'
+                :title='tab.title'
+                @click='activeTab = tab.value'
+            >
+                <img
+                    v-if='tab.image'
+                    :src='tab.image'
+                    alt=''
+                    class='skydio-tab-logo'
+                >
+                <component
+                    :is='tab.icon'
+                    v-else
+                    :size='27'
+                    stroke='1.5'
+                />
+            </button>
+        </div>
 
+        <SettingsTab
+            v-if='activeTab === "settings"'
+            :settings='settings'
+            :vehicles='vehicles'
+            :vehicles-loading='vehiclesLoading'
+            :vehicles-cached='vehiclesCached'
+            :vehicles-error='vehiclesError'
+            @save='onSaveSettings'
+            @refresh-vehicles='refreshVehicles'
+        />
         <PreFlightTab
-            v-if='activeTab === "preflight"'
+            v-else-if='activeTab === "preflight"'
             :active-feature='activeMapFeature'
             :mission-guid='mapStore.mission?.meta.guid'
             :mission-token='mapStore.mission?.token'
@@ -17,25 +51,7 @@
             :vehicles='vehicles'
             :telemetry-relay-url='settings.skydioTelemetryRelayUrl'
             :skydio-sse-url='settings.skydioSseUrl'
-        />
-        <MissionPlanningTab
-            v-else-if='activeTab === "missions"'
             :active-feature='activeMapFeature'
-            :api-key='settings.apiKey'
-        />
-        <VehiclesTab
-            v-else-if='activeTab === "vehicles"'
-            :api-key='settings.apiKey'
-            :vehicles='vehicles'
-            :loading='vehiclesLoading'
-            :cached='vehiclesCached'
-            :error='vehiclesError'
-            @refresh='refreshVehicles'
-        />
-        <SettingsTab
-            v-else-if='activeTab === "settings"'
-            :settings='settings'
-            @save='onSaveSettings'
         />
         <AlertsTab
             v-else-if='activeTab === "alerts"'
@@ -48,27 +64,24 @@
             :api-key-configured='Boolean(settings.apiKey)'
             @save='onSaveSettings'
         />
-        <WebhooksTab
-            v-else-if='activeTab === "webhooks"'
-            :api-key='settings.apiKey'
-            :settings='settings'
-        />
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
-import { TablerPillGroup } from '@tak-ps/vue-tabler';
+import { ref, reactive, computed, onMounted, onUnmounted, watch, type Component } from 'vue';
+import {
+    IconChecklist,
+    IconMessageExclamation,
+    IconSettings,
+} from '@tabler/icons-vue';
+import skydioLogo from './skydio_logo.svg';
 import { useMapStore } from '../../../src/stores/map.ts';
 import type { Feature } from '../../../src/types.ts';
 import { std } from '../../../src/std.ts';
 import PreFlightTab from './PreFlightTab.vue';
 import GetFlightsTab from './GetFlightsTab.vue';
-import MissionPlanningTab from './MissionPlanningTab.vue';
-import VehiclesTab from './VehiclesTab.vue';
 import SettingsTab from './SettingsTab.vue';
 import AlertsTab from './AlertsTab.vue';
-import WebhooksTab from './WebhooksTab.vue';
 import { listVehicles } from '../api/client';
 import { ProxyError } from '../api/proxy';
 import { loadSettings, saveSettings, mergeSkydioSettings } from '../storage/settings';
@@ -77,6 +90,13 @@ import { getCurrentUserId } from '../storage/user';
 import { AlertPoller } from '../alerts/polling';
 import { SkydioSseClient, type SseStatus } from '../alerts/sse';
 import { hasSseConfig, type SkydioAlert, type SkydioSettings, type SkydioVehicle, type SkydioWebhookAlert } from '../types';
+
+interface SkydioTabOption {
+    value: string;
+    title: string;
+    icon?: Component;
+    image?: string;
+}
 
 async function logFlightStatusToMission(
     alert: SkydioWebhookAlert,
@@ -93,14 +113,11 @@ async function logFlightStatusToMission(
     });
 }
 
-const tabs = [
-    { value: 'preflight', label: 'Pre-Flight' },
-    { value: 'flights', label: 'Get Flights' },
-    { value: 'missions', label: 'Mission Planning' },
-    { value: 'vehicles', label: 'Vehicles' },
-    { value: 'settings', label: 'Settings' },
-    { value: 'alerts', label: 'Alerts' },
-    { value: 'webhooks', label: 'Webhooks' },
+const tabs: SkydioTabOption[] = [
+    { value: 'preflight', title: 'Pre-Flight', icon: IconChecklist },
+    { value: 'flights', title: 'Skydio Cloud', image: skydioLogo },
+    { value: 'alerts', title: 'Skydio Alerts', icon: IconMessageExclamation },
+    { value: 'settings', title: 'Settings', icon: IconSettings },
 ];
 
 const mapStore = useMapStore();
@@ -309,3 +326,23 @@ watch(
     () => applyAlerts(),
 );
 </script>
+
+<style scoped>
+.skydio-tab-group {
+    flex-wrap: nowrap;
+}
+
+.skydio-tab-btn {
+    flex: 1 1 0;
+    min-width: 3.75rem;
+    min-height: 3rem;
+    padding: 0.75rem 1rem;
+}
+
+.skydio-tab-logo {
+    display: block;
+    width: 27px;
+    height: 27px;
+    object-fit: contain;
+}
+</style>

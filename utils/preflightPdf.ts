@@ -1,7 +1,12 @@
 import { jsPDF } from '../vendor/jspdf.es.min.js';
-import type {
-    PerformanceEvaluation,
-    PreflightFormState,
+import {
+    formatAviationHazards,
+    formatCrewHazards,
+    formatEquipmentHazards,
+    formatGroundHazards,
+    formatMitigations,
+    type PerformanceEvaluation,
+    type PreflightFormState,
 } from '../types';
 
 export interface PreflightPdfInput {
@@ -208,9 +213,11 @@ export function buildPreflightPdf(input: PreflightPdfInput): jsPDF {
     b.performanceTable(evaluation);
 
     b.sectionTitle('Operational Hazards');
-    b.row('Aviation Hazards', fmt(form.aviationHazards));
-    b.row('Ground-based Hazards', fmt(form.groundHazards));
-    b.row('Crew / Equipment Hazards', fmt(form.crewEquipmentHazards));
+    b.row('Aviation Hazards', formatAviationHazards(form));
+    b.row('Ground-based Hazards', formatGroundHazards(form));
+    b.row('Crew/Operator Hazards', formatCrewHazards(form));
+    b.row('Equipment Hazards', formatEquipmentHazards(form));
+    b.row('Mitigations', formatMitigations(form.mitigations));
 
     b.sectionTitle('Logistics');
     b.row('Remote Pilot(s)', fmtList(form.remotePilots));
