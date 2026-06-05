@@ -286,8 +286,9 @@ export interface PreflightFormState {
     mitigations: string[];
 
     remotePilots: string[];
+    additionalRemotePilots: string[];
     visualObservers: string[];
-    crewMembers: string;
+    crewMembers: string[];
 }
 
 export interface HazardOption {
@@ -599,11 +600,28 @@ export function formatEquipmentHazards(
 }
 
 export const PREFLIGHT_MAX_MITIGATIONS = 10;
+export const PREFLIGHT_MAX_ADDITIONAL_REMOTE_PILOTS = 5;
+export const PREFLIGHT_MAX_VISUAL_OBSERVERS = 10;
+export const PREFLIGHT_MAX_ADDITIONAL_CREW = 10;
 
 export function formatMitigations(mitigations: string[]): string {
     const items = mitigations.map((entry) => entry.trim()).filter(Boolean);
     if (items.length === 0) return '\u2014';
     return items.map((entry, index) => `${index + 1}. ${entry}`).join('; ');
+}
+
+export function formatRemotePilotsReport(
+    remotePilots: string[],
+    additionalRemotePilots: string[],
+): string {
+    const additional = additionalRemotePilots.map((entry) => entry.trim()).filter(Boolean);
+    const all = [...remotePilots, ...additional];
+    return all.length > 0 ? all.join(', ') : '\u2014';
+}
+
+export function formatTextList(entries: string[]): string {
+    const items = entries.map((entry) => entry.trim()).filter(Boolean);
+    return items.length > 0 ? items.join(', ') : '\u2014';
 }
 
 /** A generated report stored in the reports list. */

@@ -12,12 +12,12 @@
                 v-model='model[index]'
                 type='text'
                 class='form-control'
-                :placeholder='`Mitigation ${index + 1}`'
+                :placeholder='`${itemLabel} ${index + 1}`'
             >
             <button
                 type='button'
                 class='btn btn-outline-danger'
-                :aria-label='`Remove mitigation ${index + 1}`'
+                :aria-label='`Remove ${itemLabel.toLowerCase()} ${index + 1}`'
                 @click='remove(index)'
             >
                 <IconX
@@ -44,7 +44,7 @@
             v-if='model.length >= max'
             class='form-hint mt-2 mb-0'
         >
-            Maximum of {{ max }} mitigations.
+            {{ maxHint || `Maximum of ${max} entries.` }}
         </div>
     </div>
 </template>
@@ -56,8 +56,12 @@ const model = defineModel<string[]>({ required: true });
 
 const props = withDefaults(defineProps<{
     max?: number;
+    itemLabel?: string;
+    maxHint?: string;
 }>(), {
     max: 10,
+    itemLabel: 'Mitigation',
+    maxHint: '',
 });
 
 function add(): void {

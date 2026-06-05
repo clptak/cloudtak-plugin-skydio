@@ -728,19 +728,28 @@
                     <span class='form-check-label'>{{ pilotLabel(pilot) }}</span>
                 </label>
 
-                <label class='form-label mt-3'>Visual Observer(s)</label>
-                <TablerInput
-                    v-for='(_, index) in form.visualObservers'
-                    :key='index'
-                    v-model='form.visualObservers[index]'
-                    class='mb-2'
-                    :placeholder='`VO #${index + 1}`'
+                <label class='form-label mt-3 mb-2'>Additional Remote Pilot(s)</label>
+                <MitigationsList
+                    v-model='form.additionalRemotePilots'
+                    :max='PREFLIGHT_MAX_ADDITIONAL_REMOTE_PILOTS'
+                    item-label='Remote pilot'
+                    max-hint='Maximum of 5 additional remote pilots.'
                 />
 
-                <TablerInput
+                <label class='form-label mt-3 mb-2'>Visual Observer(s)</label>
+                <MitigationsList
+                    v-model='form.visualObservers'
+                    :max='PREFLIGHT_MAX_VISUAL_OBSERVERS'
+                    item-label='Visual observer'
+                    max-hint='Maximum of 10 visual observers.'
+                />
+
+                <label class='form-label mt-3 mb-2'>Additional Crewmembers</label>
+                <MitigationsList
                     v-model='form.crewMembers'
-                    class='mt-2'
-                    label='Additional Crew Members (by badge #)'
+                    :max='PREFLIGHT_MAX_ADDITIONAL_CREW'
+                    item-label='Crewmember'
+                    max-hint='Maximum of 10 additional crewmembers.'
                 />
             </div>
         </div>
@@ -934,6 +943,9 @@ import {
     EQUIPMENT_HAZARD_OPTIONS,
     GROUND_HAZARD_OPTIONS,
     PREFLIGHT_MAX_MITIGATIONS,
+    PREFLIGHT_MAX_ADDITIONAL_REMOTE_PILOTS,
+    PREFLIGHT_MAX_VISUAL_OBSERVERS,
+    PREFLIGHT_MAX_ADDITIONAL_CREW,
     EMPTY_WEATHER,
     type HazardOption,
     type PerformanceStatus,
@@ -1043,8 +1055,9 @@ function createForm(): PreflightFormState {
         equipmentHazardsOther: '',
         mitigations: [],
         remotePilots: [],
-        visualObservers: ['', '', '', '', ''],
-        crewMembers: '',
+        additionalRemotePilots: [],
+        visualObservers: [],
+        crewMembers: [],
     };
 }
 

@@ -5,6 +5,8 @@ import {
     formatEquipmentHazards,
     formatGroundHazards,
     formatMitigations,
+    formatRemotePilotsReport,
+    formatTextList,
     type PerformanceEvaluation,
     type PreflightFormState,
 } from '../types';
@@ -220,9 +222,9 @@ export function buildPreflightPdf(input: PreflightPdfInput): jsPDF {
     b.row('Mitigations', formatMitigations(form.mitigations));
 
     b.sectionTitle('Logistics');
-    b.row('Remote Pilot(s)', fmtList(form.remotePilots));
-    b.row('Visual Observer(s)', fmtList(form.visualObservers));
-    b.row('Crew Members', fmt(form.crewMembers));
+    b.row('Remote Pilot(s)', formatRemotePilotsReport(form.remotePilots, form.additionalRemotePilots));
+    b.row('Visual Observer(s)', formatTextList(form.visualObservers));
+    b.row('Additional Crewmembers', formatTextList(form.crewMembers));
 
     b.footer();
     return b.doc;
