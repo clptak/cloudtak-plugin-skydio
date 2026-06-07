@@ -585,18 +585,13 @@
                                     >
                                     <span class='form-check-label'>{{ option.label }}</span>
                                 </label>
-                                <button
+                                <LabelInfoPopup
                                     v-if='option.hint'
-                                    type='button'
-                                    class='btn btn-link btn-sm p-0 hazard-info flex-shrink-0'
+                                    class='hazard-info flex-shrink-0'
                                     :aria-label='`More information about ${option.label}`'
-                                    @click='openHazardHint(option)'
                                 >
-                                    <IconInfoCircle
-                                        :size='14'
-                                        stroke='1.5'
-                                    />
-                                </button>
+                                    {{ option.hint }}
+                                </LabelInfoPopup>
                             </div>
                         </div>
                     </div>
@@ -627,18 +622,13 @@
                                     >
                                     <span class='form-check-label'>{{ option.label }}</span>
                                 </label>
-                                <button
+                                <LabelInfoPopup
                                     v-if='option.hint'
-                                    type='button'
-                                    class='btn btn-link btn-sm p-0 hazard-info flex-shrink-0'
+                                    class='hazard-info flex-shrink-0'
                                     :aria-label='`More information about ${option.label}`'
-                                    @click='openHazardHint(option)'
                                 >
-                                    <IconInfoCircle
-                                        :size='14'
-                                        stroke='1.5'
-                                    />
-                                </button>
+                                    {{ option.hint }}
+                                </LabelInfoPopup>
                             </div>
                         </div>
                     </div>
@@ -669,18 +659,13 @@
                                     >
                                     <span class='form-check-label'>{{ option.label }}</span>
                                 </label>
-                                <button
+                                <LabelInfoPopup
                                     v-if='option.hint'
-                                    type='button'
-                                    class='btn btn-link btn-sm p-0 hazard-info flex-shrink-0'
+                                    class='hazard-info flex-shrink-0'
                                     :aria-label='`More information about ${option.label}`'
-                                    @click='openHazardHint(option)'
                                 >
-                                    <IconInfoCircle
-                                        :size='14'
-                                        stroke='1.5'
-                                    />
-                                </button>
+                                    {{ option.hint }}
+                                </LabelInfoPopup>
                             </div>
                         </div>
                     </div>
@@ -711,18 +696,13 @@
                                     >
                                     <span class='form-check-label'>{{ option.label }}</span>
                                 </label>
-                                <button
+                                <LabelInfoPopup
                                     v-if='option.hint'
-                                    type='button'
-                                    class='btn btn-link btn-sm p-0 hazard-info flex-shrink-0'
+                                    class='hazard-info flex-shrink-0'
                                     :aria-label='`More information about ${option.label}`'
-                                    @click='openHazardHint(option)'
                                 >
-                                    <IconInfoCircle
-                                        :size='14'
-                                        stroke='1.5'
-                                    />
-                                </button>
+                                    {{ option.hint }}
+                                </LabelInfoPopup>
                             </div>
                         </div>
                     </div>
@@ -741,44 +721,6 @@
                         v-model='form.mitigations'
                         :max='PREFLIGHT_MAX_MITIGATIONS'
                     />
-                </div>
-            </div>
-        </div>
-
-        <div
-            v-if='hazardHintOpen'
-            class='modal modal-blur show d-block'
-            tabindex='-1'
-            role='dialog'
-            aria-modal='true'
-            :aria-labelledby='hazardHintTitleId'
-            style='background: rgba(0, 0, 0, 0.5);'
-            @click.self='closeHazardHint'
-        >
-            <div
-                class='modal-dialog modal-dialog-centered modal-sm'
-                role='document'
-            >
-                <div class='modal-content'>
-                    <div class='modal-header'>
-                        <h5
-                            :id='hazardHintTitleId'
-                            class='modal-title'
-                        >
-                            {{ hazardHintTitle }}
-                        </h5>
-                        <button
-                            type='button'
-                            class='btn-close'
-                            aria-label='Close'
-                            @click='closeHazardHint'
-                        />
-                    </div>
-                    <div class='modal-body'>
-                        <p class='mb-0'>
-                            {{ hazardHintText }}
-                        </p>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1026,9 +968,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { IconInfoCircle } from '@tabler/icons-vue';
 import { TablerInput, TablerAlert } from '@tak-ps/vue-tabler';
 import CollapseChevron from './CollapseChevron.vue';
+import LabelInfoPopup from './LabelInfoPopup.vue';
 import MitigationsList from './MitigationsList.vue';
 import type { Feature } from '../../../src/types.ts';
 import {
@@ -1041,7 +983,6 @@ import {
     PREFLIGHT_MAX_VISUAL_OBSERVERS,
     PREFLIGHT_MAX_ADDITIONAL_CREW,
     EMPTY_WEATHER,
-    type HazardOption,
     type PerformanceStatus,
     type PreflightConfig,
     type PreflightFormState,
@@ -1183,21 +1124,6 @@ const hazardsOpen = ref(false);
 const logisticsOpen = ref(false);
 const generateOpen = ref(false);
 const reportsOpen = ref(false);
-
-const hazardHintOpen = ref(false);
-const hazardHintTitle = ref('');
-const hazardHintText = ref('');
-const hazardHintTitleId = 'operational-hazard-hint-title';
-
-function openHazardHint(option: HazardOption): void {
-    hazardHintTitle.value = option.label;
-    hazardHintText.value = option.hint ?? '';
-    hazardHintOpen.value = true;
-}
-
-function closeHazardHint(): void {
-    hazardHintOpen.value = false;
-}
 
 const weatherLoading = ref(false);
 const weatherError = ref<Error | undefined>();
@@ -1550,21 +1476,7 @@ onMounted(() => {
 }
 
 .hazard-info {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    min-width: 1.75rem;
-    min-height: 1.75rem;
     margin-top: -0.125rem;
-    line-height: 1;
-    opacity: 0.65;
-}
-
-.hazard-info:hover,
-.hazard-info:focus {
-    opacity: 1;
 }
 
 .hazard-option {
