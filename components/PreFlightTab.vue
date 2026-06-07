@@ -63,7 +63,7 @@
                         class='mt-2'
                     >
                         <div class='text-muted small mb-1'>
-                            Overlay features under the point (use these to fill
+                            Overlay features under the point (use the stable id to fill
                             <code>lib/overlay-field-map.ts</code>):
                         </div>
                         <div
@@ -73,8 +73,10 @@
                         >
                             <div class='card-body'>
                                 <div>
-                                    <strong>{{ hit.overlayName }}</strong>
-                                    — layerId <code>{{ hit.layerId }}</code>
+                                    Stable id: <strong><code>{{ hit.stableLayerId }}</code></strong>
+                                </div>
+                                <div class='text-muted small'>
+                                    full: <code>{{ hit.layerId }}</code> · source: {{ hit.source || '∅' }}
                                 </div>
                                 <ul class='mb-0 mt-1'>
                                     <li
