@@ -31,6 +31,92 @@
                     </button>
                 </div>
 
+                <div class='mb-3'>
+                    <div class='d-flex flex-wrap gap-2'>
+                        <button
+                            type='button'
+                            class='btn btn-sm btn-outline-primary'
+                            :disabled='!hasMapPoint || detecting'
+                            @click.stop='detectOverlays()'
+                        >
+                            Detect overlays at point
+                        </button>
+                        <button
+                            type='button'
+                            class='btn btn-sm btn-outline-secondary'
+                            :disabled='!hasMapPoint || detecting'
+                            @click.stop='inspectOverlays'
+                        >
+                            Inspect overlays at point
+                        </button>
+                    </div>
+                    <div
+                        v-if='detectNotice'
+                        class='alert mt-2 mb-0'
+                        :class='detectError ? "alert-danger" : "alert-success"'
+                    >
+                        {{ detectNotice }}
+                    </div>
+
+                    <div
+                        v-if='inspectResults.length'
+                        class='mt-2'
+                    >
+                        <div class='text-muted small mb-1'>
+                            Overlay features under the point (use these to fill
+                            <code>lib/overlay-field-map.ts</code>):
+                        </div>
+                        <div
+                            v-for='(hit, idx) in inspectResults'
+                            :key='idx'
+                            class='card card-sm mb-2'
+                        >
+                            <div class='card-body'>
+                                <div>
+                                    <strong>{{ hit.overlayName }}</strong>
+                                    — layerId <code>{{ hit.layerId }}</code>
+                                </div>
+                                <ul class='mb-0 mt-1'>
+                                    <li
+                                        v-for='(val, key) in hit.properties'
+                                        :key='key'
+                                    >
+                                        <code>{{ key }}</code>: {{ String(val) }}
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        v-if='debugResult'
+                        class='mt-2 text-muted small'
+                    >
+                        <div>
+                            Debug — {{ debugResult.totalFeaturesAtPoint }} feature(s) rendered here.
+                        </div>
+                        <div>
+                            Visible overlays:
+                            <span v-if='!debugResult.visibleOverlays.length'>none</span>
+                            <span
+                                v-for='ov in debugResult.visibleOverlays'
+                                :key='ov.id'
+                            >
+                                {{ ov.name }} (#{{ ov.id }}{{ ov.type ? ', ' + ov.type : '' }});
+                            </span>
+                        </div>
+                        <div>
+                            Rendered layers ← source:
+                            <span
+                                v-for='(lyr, idx) in debugResult.sampleLayers'
+                                :key='idx'
+                            >
+                                <code>{{ lyr.layerId }}</code> ← {{ lyr.source || '∅' }};
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
                 <TablerInput
                     v-model='form.dateTime'
                     label='Date / Time'
@@ -931,7 +1017,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { IconInfoCircle } from '@tabler/icons-vue';
 import { TablerInput, TablerAlert } from '@tak-ps/vue-tabler';
 import CollapseChevron from './CollapseChevron.vue';
@@ -974,6 +1060,18 @@ import {
     pdfToBase64,
 } from '../utils/preflightPdf';
 import { attachReportToMission } from '../utils/missionAttachment';
+import { useMapStore } from '../../../src/stores/map.ts';
+import { OVERLAY_FIELD_MAP, type PreflightAutofillField } from '../lib/overlay-field-map.ts';
+import {
+    detectValues,
+    inspectAtPoint,
+    debugAtPoint,
+    recenterTo,
+    type OverlayLike,
+    type RecenterMap,
+    type InspectResult,
+    type DetectDebug,
+} from '../lib/overlay-detect.ts';
 
 const props = defineProps<{
     activeFeature: Feature | null;
@@ -1180,6 +1278,122 @@ function useMapPoint(): void {
     form.longitude = point.lon;
     form.location = `POINT (${point.lon.toFixed(6)} ${point.lat.toFixed(6)})`;
 }
+
+// ── Overlay auto-fill ──────────────────────────────────────────────────────
+// Read mapped attributes from CloudTAK overlays at the selected point and write
+// them into the form. See lib/overlay-field-map.ts for the (Paul-authored) mapping.
+
+const NUMBER_FIELDS = new Set<PreflightAutofillField>(['maxAltitudeAglFt', 'latitude', 'longitude']);
+
+const detecting = ref(false);
+const detectNotice = ref<string | null>(null);
+const detectError = ref(false);
+const inspectResults = ref<InspectResult[]>([]);
+const debugResult = ref<DetectDebug | null>(null);
+
+function overlayList(): OverlayLike[] {
+    return (useMapStore().overlays ?? []) as unknown as OverlayLike[];
+}
+
+async function recenterMap(lonLat: [number, number]): Promise<RecenterMap | null> {
+    const map = useMapStore().map as unknown as RecenterMap | undefined;
+    return recenterTo(map ?? null, lonLat);
+}
+
+function applyDetectedValue(field: PreflightAutofillField, value: string): void {
+    if (NUMBER_FIELDS.has(field)) {
+        const num = Number(value);
+        (form[field] as number | null) = Number.isFinite(num) ? num : null;
+    } else {
+        (form[field] as string) = value;
+    }
+}
+
+async function detectOverlays(opts: { silent?: boolean } = {}): Promise<void> {
+    const point = mapPoint.value;
+    if (!point) return;
+
+    if (!OVERLAY_FIELD_MAP.length) {
+        if (!opts.silent) {
+            detectError.value = false;
+            detectNotice.value = 'No overlay → field mappings configured yet. Use '
+                + '"Inspect overlays at point" to discover layer ids and attributes, then add rows '
+                + 'to lib/overlay-field-map.ts.';
+        }
+        return;
+    }
+
+    detecting.value = true;
+    detectNotice.value = null;
+    detectError.value = false;
+    try {
+        const lonLat: [number, number] = [point.lon, point.lat];
+        const map = await recenterMap(lonLat);
+        if (!map) {
+            detectError.value = true;
+            detectNotice.value = 'Map is not available.';
+            return;
+        }
+        const results = detectValues(map, lonLat, OVERLAY_FIELD_MAP);
+        const filled: string[] = [];
+        for (const result of results) {
+            if (result.value != null) {
+                applyDetectedValue(result.formField, result.value);
+                filled.push(`${result.formField} ← ${result.value}`);
+            }
+        }
+        if (filled.length) {
+            detectNotice.value = `Auto-filled ${filled.length} field(s): ${filled.join(', ')}.`;
+        } else if (!opts.silent) {
+            detectNotice.value = 'No mapped overlay attributes found at this point — check the '
+                + 'overlay is toggled on, or use "Inspect overlays at point" to verify ids/keys.';
+        }
+    } catch (err) {
+        detectError.value = true;
+        detectNotice.value = err instanceof Error ? err.message : 'Overlay detection failed.';
+    } finally {
+        detecting.value = false;
+    }
+}
+
+async function inspectOverlays(): Promise<void> {
+    const point = mapPoint.value;
+    if (!point) return;
+
+    detecting.value = true;
+    detectNotice.value = null;
+    detectError.value = false;
+    inspectResults.value = [];
+    debugResult.value = null;
+    try {
+        const lonLat: [number, number] = [point.lon, point.lat];
+        const map = await recenterMap(lonLat);
+        if (!map) {
+            detectError.value = true;
+            detectNotice.value = 'Map is not available.';
+            return;
+        }
+        const hits = inspectAtPoint(map, overlayList(), lonLat);
+        inspectResults.value = hits;
+        if (!hits.length) {
+            debugResult.value = debugAtPoint(map, overlayList(), lonLat);
+            detectNotice.value = 'No overlay features matched at this point. See debug info below.';
+        }
+    } catch (err) {
+        detectError.value = true;
+        detectNotice.value = err instanceof Error ? err.message : 'Overlay inspection failed.';
+    } finally {
+        detecting.value = false;
+    }
+}
+
+// Auto-fill whenever the selected point changes (silent: no noise if nothing matches).
+watch(
+    () => (mapPoint.value ? `${mapPoint.value.lon},${mapPoint.value.lat}` : null),
+    (key) => {
+        if (key) void detectOverlays({ silent: true });
+    },
+);
 
 async function onConfigFile(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
