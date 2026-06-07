@@ -6,6 +6,3 @@ plugin_context/
 *backup*
 node_modules
 .DS_Store
-PATTERN-overlay-attribute-autofill.md
-overlay-field-map.ts
-overlay-detect.ts

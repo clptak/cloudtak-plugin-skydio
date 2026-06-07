@@ -1,0 +1,199 @@
+// Query ArcGIS/GeoJSON overlay attributes at a point, for the PreFlight tab.
+//
+// Mechanism: project the point's lon/lat to a screen pixel, query a small box around it with
+// map.queryRenderedFeatures(box), then keep features that belong to one of the user's overlays.
+// "Belongs to an overlay" is decided by the feature's SOURCE id (CloudTAK sets each overlay layer's
+// source to String(overlay.id)) or a layer-id prefix `${overlay.id}-`. This deliberately does NOT
+// depend on the overlay's `_clickable` list (often empty, or only the outline/label layer), which is
+// why an interior point would otherwise match nothing.
+//
+// Only vector/geojson overlays that are toggled ON carry attributes; raster (MapServer image)
+// overlays return nothing here.
+
+import type { OverlayFieldMapping, PreflightAutofillField } from './overlay-field-map.ts';
+
+type PixelBox = [[number, number], [number, number]];
+
+interface RenderedFeature {
+    layer: { id: string };
+    source?: string;
+    properties: Record<string, unknown> | null;
+}
+
+// Minimal structural map type so this module doesn't hard-depend on maplibre-gl.
+export interface MapLike {
+    project(lnglat: [number, number]): { x: number; y: number };
+    queryRenderedFeatures(
+        geometry?: { x: number; y: number } | PixelBox,
+        options?: { layers?: string[] },
+    ): RenderedFeature[];
+}
+
+/** Map plus the viewport helpers needed to render a point's tiles before querying. */
+export type RecenterMap = MapLike & {
+    jumpTo(opts: { center: [number, number] }): void;
+    once(ev: string, cb: () => void): void;
+};
+
+export interface OverlayLike {
+    id: number;
+    name: string;
+    visible?: boolean;
+    type?: string;
+    _clickable?: Array<{ id: string; type: string }>;
+}
+
+export interface InspectResult {
+    layerId: string;
+    overlayName: string;
+    properties: Record<string, unknown>;
+}
+
+export interface DetectResult {
+    formField: PreflightAutofillField;
+    overlayLayerId: string;
+    attribute: string;
+    /** Translated value ready to write into the form, or null if nothing matched at the point. */
+    value: string | null;
+}
+
+/** Diagnostics for when nothing matches — surfaced in the UI to debug mappings. */
+export interface DetectDebug {
+    totalFeaturesAtPoint: number;
+    /** layer id + source for every rendered feature under the point (deduped, capped). */
+    sampleLayers: Array<{ layerId: string; source: string }>;
+    visibleOverlays: Array<{ id: number; name: string; type?: string }>;
+}
+
+const BOX_HALF = 4; // pixels — tolerates thin geometries / exact-pixel misses
+
+function boxAround(map: MapLike, lonLat: [number, number]): PixelBox {
+    const p = map.project(lonLat);
+    return [[p.x - BOX_HALF, p.y - BOX_HALF], [p.x + BOX_HALF, p.y + BOX_HALF]];
+}
+
+function visibleOverlays(overlays: OverlayLike[]): OverlayLike[] {
+    return overlays.filter((o) => o.visible !== false);
+}
+
+/** Which overlay (if any) a rendered feature belongs to — by source id or layer-id prefix. */
+function overlayForFeature(f: RenderedFeature, overlays: OverlayLike[]): OverlayLike | undefined {
+    for (const o of overlays) {
+        const sid = String(o.id);
+        if (f.source === sid) return o;
+        if (f.layer.id === sid || f.layer.id.startsWith(`${sid}-`)) return o;
+    }
+    return undefined;
+}
+
+/**
+ * Recenter the map on the point and wait for its tiles to render, so queryRenderedFeatures
+ * can see overlay features there even if the point was off-screen. Returns the map (or null).
+ */
+export async function recenterTo(
+    map: RecenterMap | null | undefined,
+    lonLat: [number, number],
+): Promise<RecenterMap | null> {
+    if (!map) return null;
+    map.jumpTo({ center: lonLat });
+    await new Promise<void>((resolve) => {
+        let settled = false;
+        const done = (): void => {
+            if (!settled) {
+                settled = true;
+                resolve();
+            }
+        };
+        map.once('idle', done);
+        setTimeout(done, 4000); // fallback if 'idle' never fires
+    });
+    return map;
+}
+
+/** Dump every overlay feature under the point — used to author the mapping. */
+export function inspectAtPoint(
+    map: MapLike,
+    overlays: OverlayLike[],
+    lonLat: [number, number],
+): InspectResult[] {
+    const vis = visibleOverlays(overlays);
+    const feats = map.queryRenderedFeatures(boxAround(map, lonLat));
+
+    const out: InspectResult[] = [];
+    const seen = new Set<string>();
+    for (const f of feats) {
+        const ov = overlayForFeature(f, vis);
+        if (!ov) continue;
+        const key = `${f.layer.id}|${JSON.stringify(f.properties ?? {})}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({
+            layerId: f.layer.id,
+            overlayName: ov.name,
+            properties: (f.properties ?? {}) as Record<string, unknown>,
+        });
+    }
+    return out;
+}
+
+/** Diagnostics: what's actually rendered under the point, regardless of overlay membership. */
+export function debugAtPoint(
+    map: MapLike,
+    overlays: OverlayLike[],
+    lonLat: [number, number],
+): DetectDebug {
+    const feats = map.queryRenderedFeatures(boxAround(map, lonLat));
+    const seen = new Set<string>();
+    const sampleLayers: Array<{ layerId: string; source: string }> = [];
+    for (const f of feats) {
+        const k = `${f.layer.id}|${f.source ?? ''}`;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        sampleLayers.push({ layerId: f.layer.id, source: f.source ?? '' });
+        if (sampleLayers.length >= 40) break;
+    }
+    return {
+        totalFeaturesAtPoint: feats.length,
+        sampleLayers,
+        visibleOverlays: visibleOverlays(overlays).map((o) => ({ id: o.id, name: o.name, type: o.type })),
+    };
+}
+
+/** Apply the static mapping at the point: read each mapped attribute from its overlay layer. */
+export function detectValues(
+    map: MapLike,
+    lonLat: [number, number],
+    mapping: OverlayFieldMapping[],
+): DetectResult[] {
+    if (!mapping.length) return [];
+    const feats = map.queryRenderedFeatures(boxAround(map, lonLat));
+
+    // First feature per layer id wins (one area feature per overlay at a point).
+    const byLayer = new Map<string, Record<string, unknown>>();
+    for (const f of feats) {
+        if (!byLayer.has(f.layer.id)) byLayer.set(f.layer.id, (f.properties ?? {}) as Record<string, unknown>);
+    }
+
+    return mapping.map((m) => {
+        const props = byLayer.get(m.overlayLayerId);
+        const raw = props ? props[m.attribute] : undefined;
+        const rawStr = raw == null || raw === '' ? null : String(raw);
+        const value = rawStr == null ? null : translateValue(rawStr, m.valueMap);
+        return { formField: m.formField, overlayLayerId: m.overlayLayerId, attribute: m.attribute, value };
+    });
+}
+
+/** Translate an overlay value to its form equivalent via the row's valueMap (normalized key match). */
+export function translateValue(raw: string, valueMap?: Record<string, string>): string {
+    if (!valueMap) return raw;
+    const norm = normalizeLabel(raw);
+    for (const [k, v] of Object.entries(valueMap)) {
+        if (normalizeLabel(k) === norm) return v;
+    }
+    return raw; // unmapped → pass through (may still match an option directly)
+}
+
+/** Normalize for option-label matching: lowercase, trim, collapse internal whitespace. */
+export function normalizeLabel(s: string): string {
+    return s.toLowerCase().trim().replace(/\s+/g, ' ');
+}

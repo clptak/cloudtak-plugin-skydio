@@ -1291,21 +1291,32 @@ const detectError = ref(false);
 const inspectResults = ref<InspectResult[]>([]);
 const debugResult = ref<DetectDebug | null>(null);
 
+// The core store type is reached through an unofficial surface; cast through `unknown`
+// to a minimal shape (same approach as SkydioPanel's MapSelectionState cast).
+interface MapStoreLike {
+    map?: RecenterMap;
+    overlays?: OverlayLike[];
+}
+
+function mapStoreLike(): MapStoreLike {
+    return useMapStore() as unknown as MapStoreLike;
+}
+
 function overlayList(): OverlayLike[] {
-    return (useMapStore().overlays ?? []) as unknown as OverlayLike[];
+    return mapStoreLike().overlays ?? [];
 }
 
 async function recenterMap(lonLat: [number, number]): Promise<RecenterMap | null> {
-    const map = useMapStore().map as unknown as RecenterMap | undefined;
-    return recenterTo(map ?? null, lonLat);
+    return recenterTo(mapStoreLike().map ?? null, lonLat);
 }
 
 function applyDetectedValue(field: PreflightAutofillField, value: string): void {
+    const target = form as Record<string, unknown>;
     if (NUMBER_FIELDS.has(field)) {
         const num = Number(value);
-        (form[field] as number | null) = Number.isFinite(num) ? num : null;
+        target[field] = Number.isFinite(num) ? num : null;
     } else {
-        (form[field] as string) = value;
+        target[field] = value;
     }
 }
 
