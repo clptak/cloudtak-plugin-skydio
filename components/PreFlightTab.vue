@@ -325,7 +325,7 @@
                             <input
                                 v-model='form.mapSource'
                                 class='form-check-input'
-                                type='radio'
+                                type='checkbox'
                                 :value='opt'
                             >
                             <span class='form-check-label'>{{ opt }}</span>
@@ -349,7 +349,7 @@
                             <input
                                 v-model='form.dataCollection'
                                 class='form-check-input'
-                                type='radio'
+                                type='checkbox'
                                 :value='opt'
                             >
                             <span class='form-check-label'>{{ opt }}</span>
@@ -1142,11 +1142,11 @@ function createForm(): PreflightFormState {
         flightRule: '',
         landManager: '',
         landManagerPermissionRequired: '',
-        mapSource: '',
+        mapSource: [],
         mapSourceOther: '',
         platform: '',
         platformOther: '',
-        dataCollection: '',
+        dataCollection: [],
         dataCollectionOther: '',
         forecastAttached: '',
         weather: { ...EMPTY_WEATHER },
