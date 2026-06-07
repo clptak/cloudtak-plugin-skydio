@@ -6,19 +6,26 @@
 //
 // How to fill this in:
 //   1. In the PreFlight tab, select the map point, then click "Inspect overlays at point".
-//      It lists, for every overlay under that point, the map layer id (e.g. "57-fill")
-//      and that feature's property keys + values.
+//      It lists, for every overlay under that point, the STABLE layer id (e.g. "136-poly"),
+//      the full runtime id, the source, and that feature's property keys + values.
 //   2. Find the property that holds the value you want (e.g. districtname → "Red Rock Ranger District").
 //   3. Pick the PreFlight form field to fill (see PreflightAutofillField below).
-//   4. Add a row.
+//   4. Add a row, using the STABLE layer id for `overlayLayerId`.
+//
+// IMPORTANT — layer ids reset:
+//   CloudTAK prefixes each overlay layer with `${overlay.id}-`, and that leading number is reassigned
+//   on every restart and can differ between users (e.g. "1202-136-poly" → "1530-136-poly"). Detection
+//   matches on the STABLE suffix, so you can store either the full id ("1217-UASFM100-poly") or just
+//   the suffix ("UASFM100-poly") — both keep working after the leading number changes.
 //
 // Matching behavior at detect time:
-//   1. The raw overlay value is first run through `valueMap` (if present) to translate the overlay's
+//   1. The overlay layer is matched by stable suffix (the volatile leading "N-" is ignored).
+//   2. The raw overlay value is run through `valueMap` (if present) to translate the overlay's
 //      label into the exact value your form expects. Keys match case-insensitively + whitespace-
 //      normalized; an unmapped value passes through unchanged.
-//   2. The (translated) value is written into the form field. Number fields (e.g. maxAltitudeAglFt)
+//   3. The (translated) value is written into the form field. Number fields (e.g. maxAltitudeAglFt)
 //      are coerced to a number; everything else is written as a string.
-//   3. For <select> fields (airspaceClass, landManager, …) the written value must match an existing
+//   4. For <select> fields (airspaceClass, landManager, …) the written value must match an existing
 //      option exactly, so use `valueMap` to translate the overlay's wording into your option label.
 //
 // Note: auto-detect can only read overlays that are toggled ON and are vector/geojson (raster
@@ -35,7 +42,11 @@ export type PreflightAutofillField = {
 export interface OverlayFieldMapping {
     /** PreFlight form field to fill, e.g. 'landManager', 'airspaceClass', 'maxAltitudeAglFt'. */
     formField: PreflightAutofillField;
-    /** Maplibre layer id of the overlay (from "Inspect overlays at point"), e.g. "57-fill". */
+    /**
+     * Overlay layer id from "Inspect overlays at point". Prefer the STABLE id (no leading
+     * overlay number), e.g. "136-poly". A full runtime id ("1202-136-poly") also works —
+     * matching ignores the volatile leading "N-" so it survives id resets between runs/users.
+     */
     overlayLayerId: string;
     /** Property key on that overlay's features whose value to use, e.g. "districtname". */
     attribute: string;

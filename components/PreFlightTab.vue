@@ -1391,7 +1391,7 @@ async function inspectOverlays(): Promise<void> {
             detectNotice.value = 'Map is not available.';
             return;
         }
-        const hits = inspectAtPoint(map, overlayList(), lonLat);
+        const hits = inspectAtPoint(map, lonLat);
         inspectResults.value = hits;
         if (!hits.length) {
             debugResult.value = debugAtPoint(map, overlayList(), lonLat);
