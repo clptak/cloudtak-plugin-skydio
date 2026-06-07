@@ -180,6 +180,12 @@
                     label='LAANC Authorization #'
                 />
 
+                <TablerInput
+                    v-model='form.airspaceSpecial'
+                    class='mt-3'
+                    label='Airspace: Special'
+                />
+
                 <label class='form-label mt-3'>Platform (drone for performance check)</label>
                 <select
                     v-model='form.platform'
@@ -1130,6 +1136,7 @@ function createForm(): PreflightFormState {
         maxAltitudeAglFt: null,
         laancRequired: '',
         laancAuthNumber: '',
+        airspaceSpecial: '',
         flightCategory: '',
         missionType: '',
         flightRule: '',

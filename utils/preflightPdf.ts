@@ -189,6 +189,7 @@ export function buildPreflightPdf(input: PreflightPdfInput): jsPDF {
     b.row('Max Permitted Altitude (AGL)', form.maxAltitudeAglFt === null ? '\u2014' : `${form.maxAltitudeAglFt} ft`);
     b.row('LAANC Required', fmt(form.laancRequired));
     b.row('LAANC Authorization #', fmt(form.laancAuthNumber));
+    b.row('Airspace: Special', fmt(form.airspaceSpecial));
     b.row('Platform', fmt(platformLabel));
 
     b.sectionTitle('Flight Type');

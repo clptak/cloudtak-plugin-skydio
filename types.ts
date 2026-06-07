@@ -259,6 +259,7 @@ export interface PreflightFormState {
     maxAltitudeAglFt: number | null;
     laancRequired: string;
     laancAuthNumber: string;
+    airspaceSpecial: string;
 
     flightCategory: string;
     missionType: string;

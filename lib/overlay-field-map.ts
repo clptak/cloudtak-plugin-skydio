@@ -73,4 +73,94 @@ export const OVERLAY_FIELD_MAP: OverlayFieldMapping[] = [
     //     attribute: 'CEILING',
     //     note: 'Maximum Permitted Altitude (AGL) — written as a number',
     // },
+    {
+        formField: 'maxAltitudeAglFt',
+        overlayLayerId: '1217-UASFM100-poly',
+        attribute: 'CEILING',
+        note: 'Maximum Permitted Altitude (AGL) — written as a number',
+    },
+    {
+        formField: 'maxAltitudeAglFt',
+        overlayLayerId: '1217-UASFM50-poly',
+        attribute: 'CEILING',
+        note: 'Maximum Permitted Altitude (AGL) — written as a number',
+    },
+    {
+        formField: 'maxAltitudeAglFt',
+        overlayLayerId: '1217-UASFM0-poly',
+        attribute: 'CEILING',
+        note: 'Maximum Permitted Altitude (AGL) — written as a number',
+    },
+    {
+        formField: 'maxAltitudeAglFt',
+        overlayLayerId: '1217-UASFM200-poly',
+        attribute: 'CEILING',
+        note: 'Maximum Permitted Altitude (AGL) — written as a number',
+    },
+    {
+        formField: 'maxAltitudeAglFt',
+        overlayLayerId: '1217-UASFM300-poly',
+        attribute: 'CEILING',
+        note: 'Maximum Permitted Altitude (AGL) — written as a number',
+    },
+    {
+        formField: 'maxAltitudeAglFt',
+        overlayLayerId: '1217-UASFM400-poly',
+        attribute: 'CEILING',
+        note: 'Maximum Permitted Altitude (AGL) — written as a number',
+    },
+    {
+        formField: 'laancRequired',
+        overlayLayerId: '1217-UASFM100-poly',
+        attribute: 'LAANC_REQUIRED',
+        note: 'LAANC Required',
+        valueMap: {
+            '100': 'Yes',
+        },
+    },
+    {
+        formField: 'laancRequired',
+        overlayLayerId: '1217-UASFM50-poly',
+        attribute: 'LAANC_REQUIRED',
+        note: 'LAANC Required',
+        valueMap: {
+            '50': 'Yes',
+        },
+    },
+    {
+        formField: 'laancRequired',
+        overlayLayerId: '1217-UASFM0-poly',
+        attribute: 'LAANC_REQUIRED',
+        note: 'LAANC Required',
+        valueMap: {
+            '0': 'Yes',
+        },
+    },
+    {
+        formField: 'laancRequired',
+        overlayLayerId: '1217-UASFM200-poly',
+        attribute: 'LAANC_REQUIRED',
+        note: 'LAANC Required',
+        valueMap: {
+            '200': 'Yes',
+        },
+    },
+    {
+        formField: 'laancRequired',
+        overlayLayerId: '1217-UASFM300-poly',
+        attribute: 'LAANC_REQUIRED',
+        note: 'LAANC Required',
+        valueMap: {
+            '300': 'Yes',
+        },
+    },
+    {
+        formField: 'laancRequired',
+        overlayLayerId: '1217-UASFM400-poly',
+        attribute: 'LAANC_REQUIRED',
+        note: 'LAANC Required',
+        valueMap: {
+            '400': 'Yes',
+        },
+    },
 ];
