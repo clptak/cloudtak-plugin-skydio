@@ -588,7 +588,7 @@
                                 <LabelInfoPopup
                                     v-if='option.hint'
                                     class='hazard-info flex-shrink-0'
-                                    :aria-label='`More information about ${option.label}`'
+                                    :ariaLabel='`More information about ${option.label}`'
                                 >
                                     {{ option.hint }}
                                 </LabelInfoPopup>
@@ -625,7 +625,7 @@
                                 <LabelInfoPopup
                                     v-if='option.hint'
                                     class='hazard-info flex-shrink-0'
-                                    :aria-label='`More information about ${option.label}`'
+                                    :ariaLabel='`More information about ${option.label}`'
                                 >
                                     {{ option.hint }}
                                 </LabelInfoPopup>
@@ -662,7 +662,7 @@
                                 <LabelInfoPopup
                                     v-if='option.hint'
                                     class='hazard-info flex-shrink-0'
-                                    :aria-label='`More information about ${option.label}`'
+                                    :ariaLabel='`More information about ${option.label}`'
                                 >
                                     {{ option.hint }}
                                 </LabelInfoPopup>
@@ -699,7 +699,7 @@
                                 <LabelInfoPopup
                                     v-if='option.hint'
                                     class='hazard-info flex-shrink-0'
-                                    :aria-label='`More information about ${option.label}`'
+                                    :ariaLabel='`More information about ${option.label}`'
                                 >
                                     {{ option.hint }}
                                 </LabelInfoPopup>
