@@ -1282,8 +1282,7 @@ function overlayList(): OverlayLike[] {
 }
 
 async function recenterMap(lonLat: [number, number]): Promise<RecenterMap | null> {
-    const map = getPluginMap() ?? mapStoreLike().map ?? null;
-    return recenterTo(map as unknown as RecenterMap | null, lonLat);
+    return recenterTo(getPluginMap() as unknown as RecenterMap | null, lonLat);
 }
 
 function applyDetectedValue(field: PreflightAutofillField, value: string): void {

@@ -1,11 +1,6 @@
 import type { App } from 'vue';
 import { defineAsyncComponent, h } from 'vue';
-import type { Map as MapLibreMap } from 'maplibre-gl';
 import type { PluginAPI, PluginInstance } from '@tak-ps/cloudtak';
-import { setPluginMap } from './lib/plugin-map.ts';
-
-/** `map` is provided at runtime but not declared on PluginAPI in all CloudTAK versions. */
-type PluginAPIWithMap = PluginAPI & { map?: MapLibreMap };
 
 const MenuSkydio = defineAsyncComponent(() => import('./components/MenuSkydio.vue'));
 
@@ -47,8 +42,6 @@ export default class SkydioPlugin implements PluginInstance {
         _app: App,
         api: PluginAPI,
     ): Promise<PluginInstance> {
-        setPluginMap((api as PluginAPIWithMap).map);
-
         api.routes.add({
             path: 'plugin-skydio',
             name: SKYDIO_ROUTE_NAME,

@@ -14,19 +14,19 @@
  * Both return a Promise, swap the cursor while active, clean up after themselves,
  * and reject on Escape so you can cancel cleanly.
  *
- * Inside a plugin you already hold the raw MapLibre map via the PluginAPI:
+ * Resolve the map lazily at action time via `getPluginMap()` (never `api.map` during
+ * install — it throws "Map has not yet initialized"). SkydioPanel registers the
+ * resolver on mount; until then `getPluginMap()` returns null:
  *
+ *   import { getPluginMap } from './plugin-map';
  *   import { pickPoint, drawGeometry } from './location-picker';
  *
- *   export default {
- *     install(app, api) {
- *       async function example() {
- *         const [lng, lat] = await pickPoint(api.map);        // tap-to-pick
- *         const poly = await drawGeometry(api.map, 'polygon'); // draw a shape
- *       }
- *       return { async enable() {}, async disable() {} };
- *     }
- *   };
+ *   async function example() {
+ *     const map = getPluginMap();
+ *     if (!map) return;
+ *     const [lng, lat] = await pickPoint(map);
+ *     const poly = await drawGeometry(map, 'polygon');
+ *   }
  */
 
 import * as terraDraw from 'terra-draw';

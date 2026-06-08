@@ -30,11 +30,17 @@ export function useMapStore(): {
     mission?: { meta: { guid: string }; token?: string };
     toImport: Feature[];
     selected: Map<string, { as_feature?: () => Feature }>;
-    map?: StubMap;
+    map: StubMap;
     overlays?: StubOverlay[];
     initOverlays?: () => Promise<void>;
     getOverlayByName?: (name: string) => StubOverlay | null;
     getOverlayById?: (id: number) => StubOverlay | null;
 } {
-    return { toImport: [], selected: new Map() };
+    const stubMap: StubMap = {
+        project: () => ({ x: 0, y: 0 }),
+        queryRenderedFeatures: () => [],
+        jumpTo: () => undefined,
+        once: () => undefined,
+    };
+    return { toImport: [], selected: new Map(), map: stubMap };
 }

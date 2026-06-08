@@ -73,7 +73,9 @@ import {
     IconSettings,
 } from '@tabler/icons-vue';
 import skydioLogo from './skydio_logo.svg';
+import type { Map as MapLibreMap } from 'maplibre-gl';
 import { useMapStore } from '../../../src/stores/map.ts';
+import { setPluginMapResolver } from '../lib/plugin-map.ts';
 import { std } from '../../../src/std.ts';
 import PreFlightTab from './PreFlightTab.vue';
 import GetFlightsTab from './GetFlightsTab.vue';
@@ -226,6 +228,13 @@ function reloadForUser(): void {
 let userCheckTimer: ReturnType<typeof setInterval> | undefined;
 
 onMounted(() => {
+    setPluginMapResolver(() => {
+        try {
+            return (useMapStore() as unknown as { map: MapLibreMap }).map;
+        } catch {
+            return null;
+        }
+    });
     reloadForUser();
     applyAlerts();
     void refreshVehicles();
@@ -235,6 +244,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    setPluginMapResolver(null);
     sseClient.stop();
     poller.stop();
     window.removeEventListener('focus', reloadForUser);
