@@ -1240,7 +1240,6 @@ async function pickLocationOnMap(): Promise<void> {
         const point = { lon: lng, lat };
         pickedPoint.value = point;
         applyPickedPoint(point);
-        void detectOverlays({ silent: true });
     } catch (err) {
         if (!(err instanceof Error && err.message === 'cancelled')) {
             detectError.value = true;
@@ -1283,7 +1282,8 @@ function overlayList(): OverlayLike[] {
 }
 
 async function recenterMap(lonLat: [number, number]): Promise<RecenterMap | null> {
-    return recenterTo(getPluginMap() ?? mapStoreLike().map ?? null, lonLat);
+    const map = getPluginMap() ?? mapStoreLike().map ?? null;
+    return recenterTo(map as unknown as RecenterMap | null, lonLat);
 }
 
 function applyDetectedValue(field: PreflightAutofillField, value: string): void {

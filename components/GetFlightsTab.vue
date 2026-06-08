@@ -350,6 +350,7 @@ import type { Feature } from '../../../src/types.ts';
 import { useMapStore } from '../../../src/stores/map.ts';
 import { drawGeometry, type DrawMode } from '../lib/location-picker.ts';
 import { getPluginMap } from '../lib/plugin-map.ts';
+import type { Feature as GeoJsonFeature, Geometry } from 'geojson';
 import { normalize_geojson } from '@tak-ps/node-cot/normalize_geojson';
 import { resolveSkydioTelemetryRelayUrl } from '../lib/sse-url';
 import {
@@ -462,6 +463,32 @@ const canGenerate = computed(() => Boolean(missionForm.displayName.trim()));
 const modalTitle = computed(() =>
     missionType.value === 'waypoint' ? 'New Waypoint Flight' : 'New Map Capture Mission');
 
+/** Wrap a TerraDraw GeoJSON feature as a minimal CloudTAK Feature. */
+function geoJsonDrawToCloudTakFeature(geo: GeoJsonFeature<Geometry>): Feature {
+    const now = new Date().toISOString();
+    const raw = geo.properties && typeof geo.properties === 'object'
+        ? (geo.properties as Record<string, unknown>)
+        : {};
+    const callsign = typeof raw.callsign === 'string' ? raw.callsign : '';
+
+    return {
+        type: 'Feature',
+        id: typeof geo.id === 'string' ? geo.id : 'drawn',
+        path: '/',
+        geometry: geo.geometry,
+        properties: {
+            callsign,
+            type: 'u-d-f',
+            how: 'h-g-i-g-o',
+            time: now,
+            start: now,
+            stale: now,
+            center: [0, 0],
+            ...raw,
+        } as Feature['properties'],
+    };
+}
+
 async function drawMissionArea(mode: 'polygon' | 'linestring'): Promise<void> {
     const map = getPluginMap();
     if (!map) {
@@ -477,11 +504,7 @@ async function drawMissionArea(mode: 'polygon' | 'linestring'): Promise<void> {
 
     try {
         const feature = await drawGeometry(map, mode);
-        drawnFeature.value = {
-            type: 'Feature',
-            geometry: feature.geometry as Feature['geometry'],
-            properties: {},
-        };
+        drawnFeature.value = geoJsonDrawToCloudTakFeature(feature);
     } catch (err) {
         if (!(err instanceof Error && err.message === 'cancelled')) {
             missionNotice.value = err instanceof Error ? err.message : 'Failed to draw geometry.';
