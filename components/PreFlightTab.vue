@@ -35,6 +35,10 @@
                 </div>
 
                 <div class='mb-3'>
+                    <div class='form-hint mb-2'>
+                        Detect turns on only the overlays needed for the selected fields, reads
+                        attributes at the point, then turns those layers back off.
+                    </div>
                     <div class='d-flex flex-wrap gap-2'>
                         <button
                             type='button'
@@ -42,7 +46,17 @@
                             :disabled='!hasMapPoint || detecting'
                             @click.stop='detectOverlays()'
                         >
-                            Detect overlays at point
+                            Detect all fields
+                        </button>
+                        <button
+                            v-for='group in OVERLAY_FIELD_GROUPS'
+                            :key='group.id'
+                            type='button'
+                            class='btn btn-sm btn-outline-primary'
+                            :disabled='!hasMapPoint || detecting'
+                            @click.stop='detectOverlays({ fields: group.fields })'
+                        >
+                            Detect {{ group.label }}
                         </button>
                         <button
                             type='button'
@@ -970,7 +984,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { TablerInput, TablerAlert } from '@tak-ps/vue-tabler';
 import CollapseChevron from './CollapseChevron.vue';
 import LabelInfoPopup from './LabelInfoPopup.vue';
@@ -1014,7 +1028,14 @@ import { attachReportToMission } from '../utils/missionAttachment';
 import { useMapStore } from '../../../src/stores/map.ts';
 import { pickPoint } from '../lib/location-picker.ts';
 import { getPluginMap } from '../lib/plugin-map.ts';
-import { OVERLAY_FIELD_MAP, type PreflightAutofillField } from '../lib/overlay-field-map.ts';
+import {
+    OVERLAY_FIELD_MAP,
+    OVERLAY_FIELD_GROUPS,
+    mappingsForFields,
+    overlayNamesForMappings,
+    mappingsMissingOverlayName,
+    type PreflightAutofillField,
+} from '../lib/overlay-field-map.ts';
 import {
     detectValues,
     inspectAtPoint,
@@ -1025,6 +1046,7 @@ import {
     type InspectResult,
     type DetectDebug,
 } from '../lib/overlay-detect.ts';
+import { ensureOverlaysVisible, type OverlayStoreLike } from '../lib/overlay-ensure.ts';
 
 const props = defineProps<{
     missionGuid?: string;
@@ -1252,6 +1274,10 @@ function mapStoreLike(): MapStoreLike {
     return useMapStore() as unknown as MapStoreLike;
 }
 
+function overlayStoreLike(): OverlayStoreLike {
+    return useMapStore() as unknown as OverlayStoreLike;
+}
+
 function overlayList(): OverlayLike[] {
     return mapStoreLike().overlays ?? [];
 }
@@ -1270,24 +1296,39 @@ function applyDetectedValue(field: PreflightAutofillField, value: string): void 
     }
 }
 
-async function detectOverlays(opts: { silent?: boolean } = {}): Promise<void> {
+async function detectOverlays(opts: { fields?: PreflightAutofillField[] } = {}): Promise<void> {
     const point = mapPoint.value;
     if (!point) return;
 
-    if (!OVERLAY_FIELD_MAP.length) {
-        if (!opts.silent) {
-            detectError.value = false;
-            detectNotice.value = 'No overlay → field mappings configured yet. Use '
-                + '"Inspect overlays at point" to discover layer ids and attributes, then add rows '
-                + 'to lib/overlay-field-map.ts.';
-        }
+    const mapping = opts.fields?.length
+        ? mappingsForFields(opts.fields)
+        : OVERLAY_FIELD_MAP;
+
+    if (!mapping.length) {
+        detectError.value = false;
+        detectNotice.value = 'No overlay → field mappings configured for the selected fields.';
+        return;
+    }
+
+    const unnamed = mappingsMissingOverlayName(mapping);
+    if (unnamed.length) {
+        detectError.value = true;
+        detectNotice.value = 'Set real overlay names in lib/overlay-field-map.ts (OVERLAY_NAMES) '
+            + 'before running Detect.';
         return;
     }
 
     detecting.value = true;
     detectNotice.value = null;
     detectError.value = false;
+
+    const overlayNames = overlayNamesForMappings(mapping);
+    let restoreOverlays: (() => Promise<void>) | null = null;
+
     try {
+        const ensured = await ensureOverlaysVisible(overlayStoreLike(), overlayNames);
+        restoreOverlays = ensured.restore;
+
         const lonLat: [number, number] = [point.lon, point.lat];
         const map = await recenterMap(lonLat);
         if (!map) {
@@ -1295,7 +1336,8 @@ async function detectOverlays(opts: { silent?: boolean } = {}): Promise<void> {
             detectNotice.value = 'Map is not available.';
             return;
         }
-        const results = detectValues(map, lonLat, OVERLAY_FIELD_MAP);
+
+        const results = detectValues(map, lonLat, mapping);
         const filled: string[] = [];
         for (const result of results) {
             if (result.value != null) {
@@ -1303,16 +1345,36 @@ async function detectOverlays(opts: { silent?: boolean } = {}): Promise<void> {
                 filled.push(`${result.formField} ← ${result.value}`);
             }
         }
-        if (filled.length) {
-            detectNotice.value = `Auto-filled ${filled.length} field(s): ${filled.join(', ')}.`;
-        } else if (!opts.silent) {
-            detectNotice.value = 'No mapped overlay attributes found at this point — check the '
-                + 'overlay is toggled on, or use "Inspect overlays at point" to verify ids/keys.';
+
+        const parts: string[] = [];
+        if (ensured.enabled.length) {
+            parts.push(`Enabled ${ensured.enabled.length} overlay(s) temporarily.`);
         }
+        if (ensured.missing.length) {
+            parts.push(`Missing overlay(s): ${ensured.missing.join(', ')}. `
+                + 'Add them to the Overlays menu or lib/overlay-sources.ts.');
+        }
+        if (filled.length) {
+            parts.push(`Auto-filled ${filled.length} field(s): ${filled.join(', ')}.`);
+            detectError.value = ensured.missing.length > 0;
+        } else if (ensured.missing.length) {
+            detectError.value = true;
+            parts.push('No values detected — missing overlays could not be loaded.');
+        } else {
+            parts.push('No mapped overlay attributes found at this point — use Inspect to verify ids/keys.');
+        }
+        detectNotice.value = parts.join(' ');
     } catch (err) {
         detectError.value = true;
         detectNotice.value = err instanceof Error ? err.message : 'Overlay detection failed.';
     } finally {
+        if (restoreOverlays) {
+            try {
+                await restoreOverlays();
+            } catch {
+                // Best-effort restore; detection result already surfaced above.
+            }
+        }
         detecting.value = false;
     }
 }
@@ -1347,14 +1409,6 @@ async function inspectOverlays(): Promise<void> {
         detecting.value = false;
     }
 }
-
-// Auto-fill whenever the selected point changes (silent: no noise if nothing matches).
-watch(
-    () => (mapPoint.value ? `${mapPoint.value.lon},${mapPoint.value.lat}` : null),
-    (key) => {
-        if (key) void detectOverlays({ silent: true });
-    },
-);
 
 async function onConfigFile(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;

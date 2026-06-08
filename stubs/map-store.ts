@@ -20,10 +20,9 @@ interface StubMap {
 }
 
 interface StubOverlay {
-    id: number;
     name: string;
-    visible?: boolean;
-    type?: string;
+    visible: boolean;
+    update(body: { visible?: boolean }): Promise<void>;
 }
 
 /** Stub for CloudTAK host map store when typechecking outside CloudTAK. */
@@ -33,6 +32,9 @@ export function useMapStore(): {
     selected: Map<string, { as_feature?: () => Feature }>;
     map?: StubMap;
     overlays?: StubOverlay[];
+    initOverlays?: () => Promise<void>;
+    getOverlayByName?: (name: string) => StubOverlay | null;
+    getOverlayById?: (id: number) => StubOverlay | null;
 } {
     return { toImport: [], selected: new Map() };
 }
