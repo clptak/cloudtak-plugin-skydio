@@ -1,6 +1,7 @@
 import type { App } from 'vue';
 import { defineAsyncComponent, h } from 'vue';
 import type { PluginAPI, PluginInstance } from '@tak-ps/cloudtak';
+import { setPluginMap } from './lib/plugin-map.ts';
 
 const MenuSkydio = defineAsyncComponent(() => import('./components/MenuSkydio.vue'));
 
@@ -42,6 +43,8 @@ export default class SkydioPlugin implements PluginInstance {
         _app: App,
         api: PluginAPI,
     ): Promise<PluginInstance> {
+        setPluginMap(api.map);
+
         api.routes.add({
             path: 'plugin-skydio',
             name: SKYDIO_ROUTE_NAME,

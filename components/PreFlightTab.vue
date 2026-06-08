@@ -19,16 +19,19 @@
                 class='card-body'
             >
                 <div class='mb-3'>
-                    <span class='text-muted'>Map point: </span>
-                    <span>{{ form.location || 'No point selected — click a point on the map.' }}</span>
+                    <span class='text-muted'>Location: </span>
+                    <span>{{ form.location || 'No point selected.' }}</span>
                     <button
                         type='button'
                         class='btn btn-sm btn-outline-primary ms-2'
-                        :disabled='!hasMapPoint'
-                        @click.stop='useMapPoint'
+                        :disabled='pickingLocation'
+                        @click.stop='pickLocationOnMap'
                     >
-                        Use Map Selection
+                        {{ pickingLocation ? 'Click the map…' : 'Pick Location on Map' }}
                     </button>
+                    <div class='form-hint mt-1'>
+                        Click the button, then tap the map once. Press Escape to cancel.
+                    </div>
                 </div>
 
                 <div class='mb-3'>
@@ -393,7 +396,7 @@
                 class='card-body'
             >
                 <p class='text-muted'>
-                    Select a point on the map, then auto-fill current conditions from the National
+                    Pick a location on the map, then auto-fill current conditions from the National
                     Weather Service. US coverage only; all fields can be edited.
                 </p>
 
@@ -972,7 +975,6 @@ import { TablerInput, TablerAlert } from '@tak-ps/vue-tabler';
 import CollapseChevron from './CollapseChevron.vue';
 import LabelInfoPopup from './LabelInfoPopup.vue';
 import MitigationsList from './MitigationsList.vue';
-import type { Feature } from '../../../src/types.ts';
 import {
     AVIATION_HAZARD_OPTIONS,
     CREW_HAZARD_OPTIONS,
@@ -1010,6 +1012,8 @@ import {
 } from '../utils/preflightPdf';
 import { attachReportToMission } from '../utils/missionAttachment';
 import { useMapStore } from '../../../src/stores/map.ts';
+import { pickPoint } from '../lib/location-picker.ts';
+import { getPluginMap } from '../lib/plugin-map.ts';
 import { OVERLAY_FIELD_MAP, type PreflightAutofillField } from '../lib/overlay-field-map.ts';
 import {
     detectValues,
@@ -1023,7 +1027,6 @@ import {
 } from '../lib/overlay-detect.ts';
 
 const props = defineProps<{
-    activeFeature: Feature | null;
     missionGuid?: string;
     missionToken?: string;
 }>();
@@ -1139,27 +1142,10 @@ function pilotLabel(pilot: RemotePilot): string {
     return pilot.name ? `${pilot.id} — ${pilot.name}` : pilot.id;
 }
 
-/** Find the first [lon, lat] pair in an arbitrarily nested GeoJSON coordinate array. */
-function firstPosition(coords: unknown): [number, number] | null {
-    if (Array.isArray(coords)) {
-        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-            return [coords[0], coords[1]];
-        }
-        for (const child of coords) {
-            const found = firstPosition(child);
-            if (found) return found;
-        }
-    }
-    return null;
-}
+const pickedPoint = ref<{ lat: number; lon: number } | null>(null);
+const pickingLocation = ref(false);
 
-const mapPoint = computed<{ lat: number; lon: number } | null>(() => {
-    const geometry = props.activeFeature?.geometry;
-    if (!geometry || !('coordinates' in geometry)) return null;
-    const position = firstPosition(geometry.coordinates);
-    if (!position) return null;
-    return { lon: position[0], lat: position[1] };
-});
+const mapPoint = computed<{ lat: number; lon: number } | null>(() => pickedPoint.value);
 
 const hasMapPoint = computed(() => mapPoint.value !== null);
 
@@ -1209,12 +1195,38 @@ function formatDate(iso: string): string {
     return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
 }
 
-function useMapPoint(): void {
-    const point = mapPoint.value;
-    if (!point) return;
+function applyPickedPoint(point: { lat: number; lon: number }): void {
     form.latitude = point.lat;
     form.longitude = point.lon;
     form.location = `POINT (${point.lon.toFixed(6)} ${point.lat.toFixed(6)})`;
+}
+
+async function pickLocationOnMap(): Promise<void> {
+    const map = getPluginMap();
+    if (!map) {
+        detectError.value = true;
+        detectNotice.value = 'Map is not available.';
+        return;
+    }
+
+    pickingLocation.value = true;
+    detectNotice.value = null;
+    detectError.value = false;
+
+    try {
+        const [lng, lat] = await pickPoint(map);
+        const point = { lon: lng, lat };
+        pickedPoint.value = point;
+        applyPickedPoint(point);
+        void detectOverlays({ silent: true });
+    } catch (err) {
+        if (!(err instanceof Error && err.message === 'cancelled')) {
+            detectError.value = true;
+            detectNotice.value = err instanceof Error ? err.message : 'Failed to pick location.';
+        }
+    } finally {
+        pickingLocation.value = false;
+    }
 }
 
 // ── Overlay auto-fill ──────────────────────────────────────────────────────
@@ -1245,7 +1257,7 @@ function overlayList(): OverlayLike[] {
 }
 
 async function recenterMap(lonLat: [number, number]): Promise<RecenterMap | null> {
-    return recenterTo(mapStoreLike().map ?? null, lonLat);
+    return recenterTo(getPluginMap() ?? mapStoreLike().map ?? null, lonLat);
 }
 
 function applyDetectedValue(field: PreflightAutofillField, value: string): void {
@@ -1373,7 +1385,6 @@ async function fetchWeather(): Promise<void> {
     const point = mapPoint.value;
     if (!point) return;
 
-    useMapPoint();
     weatherLoading.value = true;
     weatherError.value = undefined;
 
@@ -1465,7 +1476,6 @@ onMounted(() => {
             .toISOString()
             .slice(0, 16);
     }
-    useMapPoint();
 });
 </script>
 

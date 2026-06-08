@@ -65,13 +65,32 @@
             </div>
             <div class='card-body'>
                 <p class='text-muted'>
-                    Select a feature on the map, then import it here. A Polygon generates a
-                    Skydio Map Capture mission (download); a LineString generates a waypoint
-                    flight you can send to Skydio or download.
+                    Draw a polygon or line on the map, then create a Skydio mission from it.
+                    A Polygon generates a Map Capture mission (download); a LineString generates a
+                    waypoint flight you can send to Skydio or download. Press Escape to cancel drawing.
                 </p>
 
+                <div class='mb-3 d-flex flex-wrap gap-2'>
+                    <button
+                        type='button'
+                        class='btn btn-outline-primary'
+                        :disabled='drawing'
+                        @click='drawMissionArea("polygon")'
+                    >
+                        {{ drawing && drawMode === "polygon" ? "Draw on map…" : "Draw Map Capture (Polygon)" }}
+                    </button>
+                    <button
+                        type='button'
+                        class='btn btn-outline-primary'
+                        :disabled='drawing'
+                        @click='drawMissionArea("linestring")'
+                    >
+                        {{ drawing && drawMode === "linestring" ? "Draw on map…" : "Draw Waypoint Route (Line)" }}
+                    </button>
+                </div>
+
                 <div class='mb-3'>
-                    <span class='text-muted'>Current selection: </span>
+                    <span class='text-muted'>Current geometry: </span>
                     <span>{{ selectionLabel }}</span>
                 </div>
 
@@ -81,7 +100,7 @@
                     :disabled='!canImport'
                     @click='openModal'
                 >
-                    Import Selected Map Feature
+                    Create Mission from Drawing
                 </button>
 
                 <div
@@ -329,6 +348,8 @@ import { ProxyError } from '../api/proxy';
 import type { SkydioFlight, SkydioVehicle } from '../types';
 import type { Feature } from '../../../src/types.ts';
 import { useMapStore } from '../../../src/stores/map.ts';
+import { drawGeometry, type DrawMode } from '../lib/location-picker.ts';
+import { getPluginMap } from '../lib/plugin-map.ts';
 import { normalize_geojson } from '@tak-ps/node-cot/normalize_geojson';
 import { resolveSkydioTelemetryRelayUrl } from '../lib/sse-url';
 import {
@@ -353,7 +374,6 @@ const props = defineProps<{
     vehicles: SkydioVehicle[];
     telemetryRelayUrl: string;
     skydioSseUrl: string;
-    activeFeature: Feature | null;
 }>();
 
 function effectiveTelemetryRelayUrl(): string {
@@ -382,6 +402,10 @@ const error = ref<Error | undefined>();
 const downloadError = ref<Error | undefined>();
 const importError = ref<Error | undefined>();
 
+const drawnFeature = ref<Feature | null>(null);
+const drawing = ref(false);
+const drawMode = ref<DrawMode | null>(null);
+
 const modalOpen = ref(false);
 const missionNotice = ref<string | null>(null);
 const missionNoticeIsError = ref(false);
@@ -402,8 +426,8 @@ interface SelectedInfo {
 }
 
 const selected = computed<SelectedInfo | null>(() => {
-    const feature = props.activeFeature;
-    if (!feature || !feature.geometry) return null;
+    const feature = drawnFeature.value;
+    if (!feature?.geometry) return null;
 
     const callsign = typeof feature.properties?.callsign === 'string'
         ? feature.properties.callsign
@@ -426,8 +450,8 @@ const missionType = computed<MissionType | null>(() => {
 
 const selectionLabel = computed(() => {
     const info = selected.value;
-    if (!info) return 'No map feature captured — click a feature on the map.';
-    const name = info.callsign || '(unnamed)';
+    if (!info) return 'None — draw a polygon or line on the map.';
+    const name = info.callsign || '(drawn)';
     return `${name} — ${info.geometryType}`;
 });
 
@@ -438,21 +462,52 @@ const canGenerate = computed(() => Boolean(missionForm.displayName.trim()));
 const modalTitle = computed(() =>
     missionType.value === 'waypoint' ? 'New Waypoint Flight' : 'New Map Capture Mission');
 
+async function drawMissionArea(mode: 'polygon' | 'linestring'): Promise<void> {
+    const map = getPluginMap();
+    if (!map) {
+        missionNotice.value = 'Map is not available.';
+        missionNoticeIsError.value = true;
+        return;
+    }
+
+    drawing.value = true;
+    drawMode.value = mode;
+    missionNotice.value = null;
+    missionNoticeIsError.value = false;
+
+    try {
+        const feature = await drawGeometry(map, mode);
+        drawnFeature.value = {
+            type: 'Feature',
+            geometry: feature.geometry as Feature['geometry'],
+            properties: {},
+        };
+    } catch (err) {
+        if (!(err instanceof Error && err.message === 'cancelled')) {
+            missionNotice.value = err instanceof Error ? err.message : 'Failed to draw geometry.';
+            missionNoticeIsError.value = true;
+        }
+    } finally {
+        drawing.value = false;
+        drawMode.value = null;
+    }
+}
+
 function openModal(): void {
     missionNotice.value = null;
     missionNoticeIsError.value = false;
 
     const info = selected.value;
     if (!info) {
-        missionNotice.value = 'Click a feature on the map first.';
+        missionNotice.value = 'Draw a polygon or line on the map first.';
         missionNoticeIsError.value = true;
         return;
     }
 
     if (missionType.value === null) {
         missionNotice.value = info.geometryType === 'Point'
-            ? 'Point flights are not supported yet. Select a Polygon (Map Capture) or LineString (waypoint flight).'
-            : `Unsupported geometry "${info.geometryType}". Select a Polygon or LineString.`;
+            ? 'Point flights are not supported yet. Draw a Polygon (Map Capture) or LineString (waypoint flight).'
+            : `Unsupported geometry "${info.geometryType}". Draw a Polygon or LineString.`;
         missionNoticeIsError.value = true;
         return;
     }
@@ -476,7 +531,7 @@ function safeFileName(displayName: string): string {
 function generateAndDownload(): void {
     const info = selected.value;
     if (!info) {
-        missionNotice.value = 'Map selection changed — re-select a feature and try again.';
+        missionNotice.value = 'Drawing changed — draw again and try again.';
         missionNoticeIsError.value = true;
         modalOpen.value = false;
         return;
@@ -526,7 +581,7 @@ function generateAndDownload(): void {
 async function sendToSkydio(): Promise<void> {
     const info = selected.value;
     if (!info || missionType.value !== 'waypoint') {
-        missionNotice.value = 'Map selection changed — re-select a LineString and try again.';
+        missionNotice.value = 'Drawing changed — draw a LineString and try again.';
         missionNoticeIsError.value = true;
         modalOpen.value = false;
         return;

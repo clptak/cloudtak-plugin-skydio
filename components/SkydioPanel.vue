@@ -41,7 +41,6 @@
         />
         <PreFlightTab
             v-else-if='activeTab === "preflight"'
-            :active-feature='activeMapFeature'
             :mission-guid='mapStore.mission?.meta.guid'
             :mission-token='mapStore.mission?.token'
         />
@@ -51,7 +50,6 @@
             :vehicles='vehicles'
             :telemetry-relay-url='settings.skydioTelemetryRelayUrl'
             :skydio-sse-url='settings.skydioSseUrl'
-            :active-feature='activeMapFeature'
         />
         <AlertsTab
             v-else-if='activeTab === "alerts"'
@@ -76,7 +74,6 @@ import {
 } from '@tabler/icons-vue';
 import skydioLogo from './skydio_logo.svg';
 import { useMapStore } from '../../../src/stores/map.ts';
-import type { Feature } from '../../../src/types.ts';
 import { std } from '../../../src/std.ts';
 import PreFlightTab from './PreFlightTab.vue';
 import GetFlightsTab from './GetFlightsTab.vue';
@@ -122,70 +119,6 @@ const tabs: SkydioTabOption[] = [
 
 const mapStore = useMapStore();
 const activeTab = ref('preflight');
-
-/**
- * The feature the user most recently interacted with on the map. A normal
- * single click opens the radial menu (mapStore.radial.cot); Ctrl+Click adds to
- * mapStore.selected; "View" sets mapStore.viewedFeature; and an ambiguous click
- * fills mapStore.select.feats. We capture the first usable feature from any of
- * these and keep the last one so it survives the radial menu closing.
- */
-const activeMapFeature = ref<Feature | null>(null);
-
-interface MapSelectionState {
-    radial?: { mode?: string; cot?: unknown };
-    viewedFeature?: unknown;
-    select?: { feats?: unknown[] };
-    selected: Map<string, unknown>;
-}
-
-function toMapFeature(value: unknown): Feature | null {
-    if (value && typeof value === 'object') {
-        const cot = value as { as_feature?: (opts?: { clone?: boolean }) => Feature };
-        if (typeof cot.as_feature === 'function') {
-            try {
-                return cot.as_feature();
-            } catch {
-                return null;
-            }
-        }
-        const feat = value as Feature;
-        if (feat.geometry) return feat;
-    }
-    return null;
-}
-
-function captureActiveFeature(): void {
-    const state = mapStore as unknown as MapSelectionState;
-
-    const candidates: unknown[] = [];
-    if (state.radial?.mode === 'cot' && state.radial.cot) candidates.push(state.radial.cot);
-    if (state.selected.size >= 1) candidates.push(...state.selected.values());
-    if (state.viewedFeature) candidates.push(state.viewedFeature);
-    if (Array.isArray(state.select?.feats)) candidates.push(...state.select.feats);
-
-    for (const candidate of candidates) {
-        const feature = toMapFeature(candidate);
-        if (feature && feature.geometry) {
-            activeMapFeature.value = feature;
-            return;
-        }
-    }
-}
-
-watch(
-    () => {
-        const state = mapStore as unknown as MapSelectionState;
-        return [
-            state.radial?.mode,
-            state.radial?.cot,
-            state.viewedFeature,
-            mapStore.selected.size,
-            state.select?.feats,
-        ];
-    },
-    () => captureActiveFeature(),
-);
 const currentUserId = ref(getCurrentUserId());
 const settings = reactive<SkydioSettings>(loadSettings());
 const vehicles = ref<SkydioVehicle[]>(loadVehicles());
@@ -299,7 +232,6 @@ onMounted(() => {
     window.addEventListener('focus', reloadForUser);
     window.addEventListener('storage', reloadForUser);
     userCheckTimer = setInterval(reloadForUser, 3000);
-    captureActiveFeature();
 });
 
 onUnmounted(() => {
