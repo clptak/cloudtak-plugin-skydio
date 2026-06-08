@@ -1167,7 +1167,10 @@ const selectedPlatform = computed(() =>
     config.platforms.find((platform) => platform.name === form.platform));
 
 const evaluation = computed(() =>
-    evaluatePerformance(form.weather, selectedPlatform.value?.specs));
+    evaluatePerformance(form.weather, selectedPlatform.value?.specs, {
+        landManagerPermissionRequired: form.landManagerPermissionRequired,
+        airspaceSpecial: form.airspaceSpecial,
+    }));
 
 const overallBadgeLabel = computed(() => {
     if (evaluation.value.metrics.length === 0) return 'NOT EVALUATED';

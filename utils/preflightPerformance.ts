@@ -3,8 +3,15 @@ import type {
     PerformanceEvaluation,
     PerformanceMetricResult,
     PerformanceStatus,
+    PreflightFormState,
     PreflightWeather,
 } from '../types';
+
+/** PreFlight form fields that contribute operational warnings to the performance check. */
+export type PerformanceFormContext = Pick<
+    PreflightFormState,
+    'landManagerPermissionRequired' | 'airspaceSpecial'
+>;
 
 function metric(
     label: string,
@@ -61,6 +68,37 @@ function dewPointSpreadMetric(weather: PreflightWeather): PerformanceMetricResul
     };
 }
 
+function landManagerPermissionMetric(
+    landManagerPermissionRequired: string,
+): PerformanceMetricResult | null {
+    if (landManagerPermissionRequired.trim().toLowerCase() !== 'yes') return null;
+    return {
+        label: 'Confirm Agency Permission / Coordination',
+        value: 'Required',
+        limit: '—',
+        status: 'warn',
+    };
+}
+
+function airspaceSpecialMetric(airspaceSpecial: string): PerformanceMetricResult | null {
+    const text = airspaceSpecial.trim();
+    if (!text) return null;
+    return {
+        label: 'Airspace Special',
+        value: text,
+        limit: '—',
+        status: 'warn',
+    };
+}
+
+function formContextMetrics(form: PerformanceFormContext | undefined): PerformanceMetricResult[] {
+    if (!form) return [];
+    return [
+        landManagerPermissionMetric(form.landManagerPermissionRequired),
+        airspaceSpecialMetric(form.airspaceSpecial),
+    ].filter((m): m is PerformanceMetricResult => m !== null);
+}
+
 /**
  * Compare the current weather against a platform's performance specs. Any spec
  * left undefined is skipped. Missing wind/temperature values fail (so the gap is
@@ -71,11 +109,14 @@ function dewPointSpreadMetric(weather: PreflightWeather): PerformanceMetricResul
 export function evaluatePerformance(
     weather: PreflightWeather,
     spec: DronePerformanceSpec | undefined,
+    form?: PerformanceFormContext,
 ): PerformanceEvaluation {
+    const operationalWarnings = formContextMetrics(form);
+
     if (!spec) {
         // Still run the spread check even with no spec.
         const spreadResult = dewPointSpreadMetric(weather);
-        const metrics = spreadResult ? [spreadResult] : [];
+        const metrics = [...operationalWarnings, ...(spreadResult ? [spreadResult] : [])];
         return { overallPass: metrics.every((m) => m.status !== 'fail'), metrics };
     }
 
@@ -114,6 +155,7 @@ export function evaluatePerformance(
             'warn',
         ),
         dewPointSpreadMetric(weather),
+        ...operationalWarnings,
     ];
 
     const metrics = candidates.filter((m): m is PerformanceMetricResult => m !== null);

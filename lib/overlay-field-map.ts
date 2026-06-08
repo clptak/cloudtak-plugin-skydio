@@ -15,7 +15,7 @@
 // IMPORTANT — layer ids reset:
 //   CloudTAK prefixes each overlay layer with `${overlay.id}-`, and that leading number is reassigned
 //   on every restart and can differ between users (e.g. "1202-136-poly" → "1530-136-poly"). Detection
-//   matches on the STABLE suffix, so you can store either the full id ("1217-UASFM100-poly") or just
+//   matches on the STABLE suffix, so you can store either the full id ("UASFM100-poly") or just
 //   the suffix ("UASFM100-poly") — both keep working after the leading number changes.
 //
 // Matching behavior at detect time:
@@ -86,43 +86,46 @@ export const OVERLAY_FIELD_MAP: OverlayFieldMapping[] = [
     // },
     {
         formField: 'maxAltitudeAglFt',
-        overlayLayerId: '1217-UASFM100-poly',
+        overlayLayerId: 'UASFM100-poly',
         attribute: 'CEILING',
         note: 'Maximum Permitted Altitude (AGL) — written as a number',
     },
     {
         formField: 'maxAltitudeAglFt',
-        overlayLayerId: '1217-UASFM50-poly',
+        overlayLayerId: 'UASFM50-poly',
         attribute: 'CEILING',
         note: 'Maximum Permitted Altitude (AGL) — written as a number',
     },
     {
         formField: 'maxAltitudeAglFt',
-        overlayLayerId: '1217-UASFM0-poly',
+        overlayLayerId: 'UASFM0-poly',
+        attribute: 'CEILING',
+        note: 'Maximum Permitted Altitude (AGL) — written as a number',
+        valueMap: {
+            '0': '0 - NO FLY ZONE',
+        },
+    },
+    {
+        formField: 'maxAltitudeAglFt',
+        overlayLayerId: 'UASFM200-poly',
         attribute: 'CEILING',
         note: 'Maximum Permitted Altitude (AGL) — written as a number',
     },
     {
         formField: 'maxAltitudeAglFt',
-        overlayLayerId: '1217-UASFM200-poly',
+        overlayLayerId: 'UASFM300-poly',
         attribute: 'CEILING',
         note: 'Maximum Permitted Altitude (AGL) — written as a number',
     },
     {
         formField: 'maxAltitudeAglFt',
-        overlayLayerId: '1217-UASFM300-poly',
-        attribute: 'CEILING',
-        note: 'Maximum Permitted Altitude (AGL) — written as a number',
-    },
-    {
-        formField: 'maxAltitudeAglFt',
-        overlayLayerId: '1217-UASFM400-poly',
+        overlayLayerId: 'UASFM400-poly',
         attribute: 'CEILING',
         note: 'Maximum Permitted Altitude (AGL) — written as a number',
     },
     {
         formField: 'laancRequired',
-        overlayLayerId: '1217-UASFM100-poly',
+        overlayLayerId: 'UASFM100-poly',
         attribute: 'LAANC_REQUIRED',
         note: 'LAANC Required',
         valueMap: {
@@ -131,7 +134,7 @@ export const OVERLAY_FIELD_MAP: OverlayFieldMapping[] = [
     },
     {
         formField: 'laancRequired',
-        overlayLayerId: '1217-UASFM50-poly',
+        overlayLayerId: 'UASFM50-poly',
         attribute: 'LAANC_REQUIRED',
         note: 'LAANC Required',
         valueMap: {
@@ -140,7 +143,7 @@ export const OVERLAY_FIELD_MAP: OverlayFieldMapping[] = [
     },
     {
         formField: 'laancRequired',
-        overlayLayerId: '1217-UASFM0-poly',
+        overlayLayerId: 'UASFM0-poly',
         attribute: 'LAANC_REQUIRED',
         note: 'LAANC Required',
         valueMap: {
@@ -149,7 +152,7 @@ export const OVERLAY_FIELD_MAP: OverlayFieldMapping[] = [
     },
     {
         formField: 'laancRequired',
-        overlayLayerId: '1217-UASFM200-poly',
+        overlayLayerId: 'UASFM200-poly',
         attribute: 'LAANC_REQUIRED',
         note: 'LAANC Required',
         valueMap: {
@@ -158,7 +161,7 @@ export const OVERLAY_FIELD_MAP: OverlayFieldMapping[] = [
     },
     {
         formField: 'laancRequired',
-        overlayLayerId: '1217-UASFM300-poly',
+        overlayLayerId: 'UASFM300-poly',
         attribute: 'LAANC_REQUIRED',
         note: 'LAANC Required',
         valueMap: {
@@ -167,11 +170,154 @@ export const OVERLAY_FIELD_MAP: OverlayFieldMapping[] = [
     },
     {
         formField: 'laancRequired',
-        overlayLayerId: '1217-UASFM400-poly',
+        overlayLayerId: 'UASFM400-poly',
         attribute: 'LAANC_REQUIRED',
         note: 'LAANC Required',
         valueMap: {
             '400': 'Yes',
         },
     },
+    /*{
+        customFieldId: 
+        overlayLayerId: 'wilderness-poly',
+        attribute: 'NAME', // this layer uses `wildernessname`; the lowercase `wilderness-poly` uses `NAME`
+        note: 'Wilderness Area Name',
+    },*/
+    {
+        formField: 'airspaceSpecial',
+        overlayLayerId: '394-poly',
+        attribute: 'TYPE_CODE',
+        note: 'Airspace Special',
+        valueMap: {
+            'R': 'Restricted - Check NOTAM',
+        },
+    },
+    {
+        formField: 'airspaceSpecial',
+        overlayLayerId: '400-poly',
+        attribute: 'REASON',
+        note: 'NATIONAL SECURITY',
+        valueMap: {
+            'NATIONAL SECURITY': 'NO FLY ZONE',
+        },
+    },
+    {
+        formField: 'airspaceSpecial',
+        overlayLayerId: 'gcnp-sectors-fill',
+        attribute: 'LOCAL_TYPE',
+        note: 'Airspace Special',
+        valueMap: {
+            'SFRA': 'GCNP SFRA - Check with Interagency Aviation Coordinator',
+        },
+    },
+    {
+        formField: 'landManagerPermissionRequired',
+        overlayLayerId: 'gcnp-sectors-fill',
+        attribute: 'LOCAL_TYPE',
+        note: 'Airspace Special',
+        valueMap: {
+            'SFRA': 'Yes',
+        },
+    },
+    {
+        formField: 'landManagerPermissionRequired',
+        overlayLayerId: '394-poly',
+        attribute: 'TYPE_CODE',
+        note: 'Airspace Special',
+        valueMap: {
+            'R': 'Yes',
+        },
+    },
+    {
+        formField: 'landManagerPermissionRequired',
+        overlayLayerId: '400-poly',
+        attribute: 'REASON',
+        note: 'Land Manager Permission Required (Yes / No)',
+        valueMap: {
+            'National Security': 'Yes',
+        },
+    },
+    {
+        formField: 'landManagerPermissionRequired',
+        overlayLayerId: 'wilderness-poly',
+        attribute: 'Editor',
+        note: 'Land Manager Permission Required (Yes / No)',
+        valueMap: {
+            'TWSAdmin': 'Yes',
+        },
+    },
+    {
+        formField: 'landManager',
+        overlayLayerId: 'landowner-poly',
+        attribute: 'OWNERORMANAGINGAGENCY',
+        note: 'Land Owner or Managing Agency',
+        valueMap: {
+            'Apache-Sitgreaves National Forests': 'United States Forest Service',
+            'Coconino National Forest': 'United States Forest Service',
+            'Kaibab National Forest': 'United States Forest Service',
+            'Grand Canyon National Park': 'National Park Service',
+            'Sunset Crater National Monument': 'National Park Service',
+            'Walnut Canyon National Monument': 'National Park Service',
+            'Vermilion Cliffs National Monument': 'Bureau of Land Management',
+            'Bureau of Land Management': 'Bureau of Land Management',
+            'Baaj Nwaavjo Itah Kukveni National Monument': 'Bureau of Land Management',
+            'Glen Canyon National Recreation Area': 'National Park Service',
+            'City of Page': 'County',
+            'City of Flagstaff': 'County',
+            'City of Williams': 'County',
+            'City of Sedona': 'County',
+            'Navajo Nation': 'Native American Reservation',
+            'Hopi Tribal Land': 'Native American Reservation',
+            'Hualapai Tribal Land': 'Native American Reservation',
+            'Havasupai Tribal Land': 'Native American Reservation',
+            'Private': 'Private',
+            'State Trust': 'State Land',
+        },
+    },
+    {
+        formField: 'landManagerPermissionRequired',
+        overlayLayerId: 'landowner-poly',
+        attribute: 'OWNERORMANAGINGAGENCY',
+        note: 'Land Manager Permission Required (Yes / No)',
+        valueMap: {
+            'Apache-Sitgreaves National Forests': 'No',
+            'Coconino National Forest': 'No',
+            'Kaibab National Forest': 'No',
+            'Grand Canyon National Park': 'Yes',
+            'Sunset Crater National Monument': 'Yes',
+            'Walnut Canyon National Monument': 'Yes',
+            'Vermilion Cliffs National Monument': 'Yes',
+            'Bureau of Land Management': 'Yes',
+            'Baaj Nwaavjo Itah Kukveni National Monument': 'Yes',
+            'Glen Canyon National Recreation Area': 'Yes',
+            'City of Page': 'No',
+            'City of Flagstaff': 'No',
+            'City of Williams': 'No',
+            'City of Sedona': 'No',
+            'Navajo Nation': 'Yes',
+            'Hopi Tribal Land': 'Yes',
+            'Hualapai Tribal Land': 'Yes',
+            'Havasupai Tribal Land': 'Yes',
+            'Private': 'No',
+            'State Trust': 'No',
+        },
+    },
+    {
+        formField: 'airspaceClass',
+        overlayLayerId: 'E4-poly',
+        attribute: 'TYPE_CODE',
+        note: 'Airspace Class',
+        valueMap: {
+            'CLASS_E4': 'E',
+        },
+    },
+    {
+        formField: 'airspaceClass',
+        overlayLayerId: 'D-poly',
+        attribute: 'TYPE_CODE',
+        note: 'Airspace Class',
+        valueMap: {
+            'CLASS_D': 'D',
+        },
+    }
 ];
