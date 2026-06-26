@@ -6,7 +6,7 @@
         <button
             type='button'
             class='btn btn-link btn-sm p-0 text-muted lh-1 border-0'
-            :aria-label='ariaLabel'
+            :aria-label='infoLabel'
             @click.stop='open = !open'
         >
             <IconInfoCircle
@@ -30,7 +30,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { IconInfoCircle } from '@tabler/icons-vue';
 
 defineProps<{
-    ariaLabel: string;
+    infoLabel: string;
 }>();
 
 const open = ref(false);
