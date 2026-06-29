@@ -31,7 +31,7 @@
 
 import * as terraDraw from 'terra-draw';
 import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import type { Map as MapLibreMap, MapMouseEvent } from 'maplibre-gl';
 import type { Feature, Point, LineString, Polygon } from 'geojson';
 
