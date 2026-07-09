@@ -1,5 +1,5 @@
 <template>
-    <SkydioMenuTemplate name='Skydio'>
+    <MenuTemplate name='Skydio'>
         <template #title>
             <div class='d-flex align-items-center gap-2 px-2'>
                 <img
@@ -13,11 +13,11 @@
             </div>
         </template>
         <SkydioPanel />
-    </SkydioMenuTemplate>
+    </MenuTemplate>
 </template>
 
 <script setup lang="ts">
-import SkydioMenuTemplate from './SkydioMenuTemplate.vue';
+import MenuTemplate from '../lib/MenuTemplate.vue';
 import SkydioPanel from './SkydioPanel.vue';
 import skydioLogo from './skydio_logo.svg';
 </script>

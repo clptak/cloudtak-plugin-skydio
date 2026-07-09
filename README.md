@@ -102,6 +102,7 @@ alerts/sse.ts         # Fetch-based SSE client (Bearer auth)
 alerts/webhook.ts     # SSE payload → UI alerts + DataSync logs
 alerts/polling.ts     # Fallback alert detection (vehicles + flights)
 components/           # Settings, Alerts, Webhooks tabs
+lib/MenuTemplate.vue  # Vendored CloudTAK menu shell (refresh from locator or core on CloudTAK upgrades)
 storage/settings.ts   # localStorage persistence
 types.ts              # Shared types
 ```
