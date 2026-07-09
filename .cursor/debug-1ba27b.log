@@ -1,2 +1,0 @@
-{"sessionId":"1ba27b","runId":"post-fix-v2","hypothesisId":"mission-upload","location":"missionAttachment.ts:attachReportToMission","message":"attach start","data":{"missionGuidLen":36,"hasMissionToken":true,"fileName":"S2601234_Mission_Packet.pdf","blobSize":16289},"timestamp":1780412752311}
-{"sessionId":"1ba27b","runId":"post-fix-v2","hypothesisId":"mission-upload","location":"missionAttachment.ts:uploadToMission","message":"mission upload ok","data":{"fileName":"S2601234_Mission_Packet.pdf","blobSize":16289},"timestamp":1780412754545}
