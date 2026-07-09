@@ -37,10 +37,10 @@ refresh** before assuming the code is broken.
 
 ```
 https://api.skydio.com
-https://webhook.ccsosar.net
-https://users.ccsosar.net
+https://webhook.example.com
+https://auth.example.com
 https://caltopo.com
-https://etl.ccsosar.net
+https://etl.example.com
 https://api.weather.gov
 ```
 
@@ -78,6 +78,6 @@ code changes can't gate these origins — the gate is 100% CloudTAK's
 | --- | --- | --- |
 | Skydio Cloud API | `https://api.skydio.com` | fixed in code |
 | NWS weather (Pre-Flight) | `https://api.weather.gov` | fixed in code |
-| Authentik token (SSE auth) | your Authentik host, e.g. `https://users.ccsosar.net` | Settings → Authentik Token URL |
-| Webhook server (SSE/alerts) | your webhook host, e.g. `https://webhook.ccsosar.net` | Settings → Skydio SSE / Webhook URL |
+| Authentik token (SSE auth) | your Authentik host, e.g. `https://auth.example.com` | Settings → Authentik Token URL |
+| Webhook server (SSE/alerts) | your webhook host, e.g. `https://webhook.example.com` | Settings → Skydio SSE / Webhook URL |
 | Telemetry relay (optional) | your relay host | Settings → Telemetry Relay URL |

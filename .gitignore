@@ -5,4 +5,4 @@ plugin_context/
 .env.*
 *backup*
 node_modules
-.DS_Store
+.DS_Store.cursor/
