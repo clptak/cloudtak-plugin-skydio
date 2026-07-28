@@ -42,7 +42,7 @@
         <PreFlightTab
             v-else-if='activeTab === "preflight"'
             :mission-guid='mapStore.mission?.meta.guid'
-            :mission-token='mapStore.mission?.token'
+            :mission-token='mapStore.mission?.missiontoken'
         />
         <GetFlightsTab
             v-else-if='activeTab === "flights"'
