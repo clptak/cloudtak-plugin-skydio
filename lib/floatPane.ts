@@ -7,8 +7,9 @@
 import { markRaw } from 'vue';
 import type { Component } from 'vue';
 import type { PluginAPI } from '@tak-ps/cloudtak';
-// Resolved by CloudTAK Vite to api/web/src/stores/float.ts (not present in standalone checkout).
-// @ts-expect-error — host module; see stubs/float-store.ts and env.d.ts for local shapes
+// Host module under api/web/plugins (Vite remaps); absent in standalone checkout.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- dual local/host typecheck
+// @ts-ignore
 import { useFloatStore } from '../../../src/stores/float.ts';
 import { isPopoutOpen, focusPopout } from './popout.ts';
 

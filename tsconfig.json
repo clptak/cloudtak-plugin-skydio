@@ -18,7 +18,9 @@
       "../../../src/types.ts": ["stubs/types.ts"],
       "@tak-ps/cloudtak": ["cloudtak_plugin_docs/plugin.ts"],
       "pinia": ["stubs/pinia.ts"],
-      "vue-router": ["stubs/vue-router.ts"]
+      "vue-router": ["stubs/vue-router.ts"],
+      "@tabler/icons-vue": ["stubs/tabler-icons-vue.ts"],
+      "@tak-ps/vue-tabler": ["stubs/vue-tabler.ts"]
     }
   },
   "include": ["**/*.ts", "**/*.vue", "env.d.ts", "stubs/**/*.ts"],
