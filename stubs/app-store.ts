@@ -1,4 +1,5 @@
-export function useAppStore(_pinia?: unknown) {
+export function useAppStore(...args: unknown[]) {
+    void args;
     return {
         isMobileDetected: false,
     };

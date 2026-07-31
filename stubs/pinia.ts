@@ -6,8 +6,8 @@ export type Pinia = Plugin & {
 
 export function createPinia(): Pinia {
     const pinia = {
-        install(_app: App): void {
-            // stub
+        install(app: App): void {
+            void app;
         },
     };
     return pinia;

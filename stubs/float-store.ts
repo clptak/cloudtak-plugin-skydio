@@ -13,7 +13,8 @@ export type Pane = {
 
 const panes = new Map<string, Pane>();
 
-export function useFloatStore(_pinia?: unknown) {
+export function useFloatStore(...args: unknown[]) {
+    void args;
     return {
         panes,
         add(opts: {
