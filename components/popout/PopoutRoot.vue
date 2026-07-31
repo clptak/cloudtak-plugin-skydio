@@ -13,7 +13,7 @@
             >
             <span class='ms-2 text-truncate'>Skydio</span>
         </div>
-        <div class='flex-grow-1 min-height-0 overflow-hidden'>
+        <div class='flex-grow-1 min-height-0 overflow-auto'>
             <SkydioPanel />
         </div>
     </div>
