@@ -1,8 +1,18 @@
 import type { App } from 'vue';
-import { defineAsyncComponent, h } from 'vue';
+import { defineAsyncComponent, defineComponent, h, onMounted } from 'vue';
 import type { PluginAPI, PluginInstance } from '@tak-ps/cloudtak';
+import { useAppStore } from '@/stores/app.ts';
+import MenuSkydio from './components/MenuSkydio.vue';
+import {
+    bindFloatPane,
+    cleanupFloatPane,
+    openDesktopPane,
+} from './lib/floatPane.ts';
+import { bindPopout, closePopout } from './lib/popout.ts';
 
-const MenuSkydio = defineAsyncComponent(() => import('./components/MenuSkydio.vue'));
+const SkydioFloatShell = defineAsyncComponent(
+    () => import('./components/SkydioFloatShell.vue')
+);
 
 const SKYDIO_ROUTE_NAME = 'home-menu-plugin-skydio';
 const SKYDIO_MENU_KEY = 'skydio';
@@ -42,17 +52,42 @@ export default class SkydioPlugin implements PluginInstance {
         _app: App,
         api: PluginAPI,
     ): Promise<PluginInstance> {
-        api.routes.add({
-            path: 'plugin-skydio',
-            name: SKYDIO_ROUTE_NAME,
-            component: MenuSkydio,
-        }, SKYDIO_ROUTE_PARENT);
-
         return new SkydioPlugin(api);
     }
 
     async enable(): Promise<void> {
-        this.api.menu.add({
+        const api = this.api;
+
+        bindPopout(api);
+        bindFloatPane({
+            api,
+            shell: SkydioFloatShell,
+        });
+
+        api.routes.add({
+            path: 'plugin-skydio',
+            name: SKYDIO_ROUTE_NAME,
+            component: defineComponent({
+                name: 'SkydioEntry',
+                setup() {
+                    const appStore = useAppStore();
+                    onMounted(() => {
+                        if (!appStore.isMobileDetected) {
+                            openDesktopPane();
+                            void api.router.replace({ name: 'home' });
+                        }
+                    });
+                    return () => {
+                        if (appStore.isMobileDetected) {
+                            return h(MenuSkydio);
+                        }
+                        return null;
+                    };
+                },
+            }),
+        }, SKYDIO_ROUTE_PARENT);
+
+        api.menu.add({
             key: SKYDIO_MENU_KEY,
             label: 'Skydio',
             route: SKYDIO_ROUTE_NAME,
@@ -64,5 +99,10 @@ export default class SkydioPlugin implements PluginInstance {
 
     async disable(): Promise<void> {
         this.api.menu.remove(SKYDIO_MENU_KEY);
+        closePopout();
+        cleanupFloatPane();
+        if (this.api.router.hasRoute(SKYDIO_ROUTE_NAME)) {
+            this.api.router.removeRoute(SKYDIO_ROUTE_NAME);
+        }
     }
 }

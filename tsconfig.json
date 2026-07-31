@@ -13,7 +13,12 @@
       "@/stores/app.ts": ["stubs/app-store.ts"],
       "../../../src/std.ts": ["stubs/std.ts"],
       "../../../src/stores/map.ts": ["stubs/map-store.ts"],
-      "../../../src/types.ts": ["stubs/types.ts"]
+      "../../../src/stores/float.ts": ["stubs/float-store.ts"],
+      "../../../src/components/CloudTAK/util/FloatingPane.vue": ["stubs/FloatingPane.vue"],
+      "../../../src/types.ts": ["stubs/types.ts"],
+      "@tak-ps/cloudtak": ["cloudtak_plugin_docs/plugin.ts"],
+      "pinia": ["stubs/pinia.ts"],
+      "vue-router": ["stubs/vue-router.ts"]
     }
   },
   "include": ["**/*.ts", "**/*.vue", "env.d.ts", "stubs/**/*.ts"],
