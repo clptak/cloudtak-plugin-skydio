@@ -79,7 +79,7 @@
                     v-model='local.authentikTokenUrl'
                     label='Authentik Token URL'
                     placeholder='https://auth.example.com/application/o/token/'
-                    description='OAuth2 token endpoint for client_credentials grant. Whitelist this host in Plugin Proxy.'
+                    description='Must end with /application/o/token/ (trailing slash). Whitelist this host in Plugin Proxy.'
                 />
                 <TablerInput
                     v-model='local.oauthClientId'

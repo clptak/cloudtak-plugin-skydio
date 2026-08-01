@@ -81,3 +81,29 @@ code changes can't gate these origins — the gate is 100% CloudTAK's
 | Authentik token (SSE auth) | your Authentik host, e.g. `https://auth.example.com` | Settings → Authentik Token URL |
 | Webhook server (SSE/alerts) | your webhook host, e.g. `https://webhook.example.com` | Settings → Skydio SSE / Webhook URL |
 | Telemetry relay (optional) | your relay host | Settings → Telemetry Relay URL |
+
+## Webhook SSE 401 / JWKS
+
+SSE auth failures that look like bad Skydio settings are often **relay JWKS**, not the plugin.
+
+If webhook-server logs:
+
+```text
+TokenValidator: invalid token — primary:Couldn't retrieve JWK set from URL: Read timed out | …
+Skydio SSE: rejected unauthenticated connection
+```
+
+then Authentik issued (or would issue) a token, but **webhook-server cannot download JWKS** in time. Nimbus defaults are ~500ms; under Authentik load that fails even when `wget --timeout=5` works.
+
+**Fix on the VPS (tak-stack), not in this plugin:**
+
+1. Prefer internal Docker DNS as primary:
+   - `AUTHENTIK_JWKS_URL=http://authentik-server-1:9000/application/o/webhook-sse/jwks/`
+   - optional public URL as `AUTHENTIK_JWKS_URL_FALLBACK`
+2. Confirm from inside the container: `wget -qO- --timeout=5 "$AUTHENTIK_JWKS_URL"` starts with `{"keys"`.
+3. Rebuild/redeploy `webhook-server` from the **`clptak-webhook-server`** git clone (`WEBHOOK_SERVER_PATH` must point there — not a non-repo `webhook-server` folder).
+4. Caddy: `flush_interval -1` on `/events/*`. Relay should send an immediate SSE comment on subscribe so the UI can go green before the first Skydio event.
+
+Also keep Authentik token URL as `https://<host>/application/o/token/` (trailing slash) or Plugin Proxy Token Test returns **405**.
+
+Shared checklist for Somewear + Skydio: Cursor skill **cloudtak-webhook-plugin** → “Shared relay failure modes”. This plugin does **not** use Somewear’s connect-phase idle abort; no Skydio timeout-clear port is required for that bug.

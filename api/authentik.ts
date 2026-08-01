@@ -7,6 +7,21 @@ export interface OAuthTokenResponse {
     token_type: string;
 }
 
+/** Authentik token endpoint must end with `/` or Django returns 405 (proxy will not follow redirects). */
+export function normalizeAuthentikTokenUrl(url: string): string {
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+    try {
+        const parsed = new URL(trimmed);
+        if (!parsed.pathname.endsWith('/')) {
+            parsed.pathname = `${parsed.pathname}/`;
+        }
+        return parsed.toString();
+    } catch {
+        return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
+    }
+}
+
 function buildTokenBody(clientId: string, clientSecret: string, scope?: string): string {
     const params = new URLSearchParams({
         grant_type: 'client_credentials',
@@ -49,7 +64,24 @@ function parseOAuthTokenPayload(
     if (typeof record.error === 'string') parts.push(record.error);
     if (typeof record.error_description === 'string') parts.push(record.error_description);
     if (parts.length > 0) {
-        throw new Error(`Authentik token error (HTTP ${upstreamStatus}): ${parts.join(' — ')}`);
+        let hint = '';
+        if (parts[0] === 'invalid_client') {
+            hint = ' — In Authentik open the webhook-sse OAuth2 Provider, regenerate Client Secret, '
+                + 'paste Client ID + new Secret here (not an unrelated Basic password). '
+                + 'Token URL must be …/application/o/token/ with trailing slash.';
+        } else if (upstreamStatus === 405) {
+            hint = ' — HTTP 405 usually means the token URL is missing a trailing slash '
+                + '(use …/application/o/token/).';
+        }
+        throw new Error(
+            `Authentik token error (HTTP ${upstreamStatus}): ${parts.join(' — ')}${hint}`,
+        );
+    }
+
+    if (upstreamStatus === 405) {
+        throw new Error(
+            `${context}: HTTP 405 — token URL must end with / (e.g. https://auth.example.com/application/o/token/).`,
+        );
     }
 
     throw new Error(`${context}: missing access_token (HTTP ${upstreamStatus})`);
@@ -119,12 +151,15 @@ export async function fetchClientCredentialsToken(opts: {
     clientId: string;
     clientSecret: string;
 }): Promise<OAuthTokenResponse> {
-    const tokenUrl = opts.tokenUrl.trim();
+    const tokenUrl = normalizeAuthentikTokenUrl(opts.tokenUrl);
     const clientId = opts.clientId.trim();
     const clientSecret = opts.clientSecret.trim();
 
     if (!clientId || !clientSecret) {
         throw new Error('Authentik Client ID and Client Secret are required');
+    }
+    if (!tokenUrl) {
+        throw new Error('Authentik token URL is required');
     }
 
     return requestToken(tokenUrl, clientId, clientSecret);

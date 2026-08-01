@@ -47,22 +47,44 @@ function formatSseError(err: unknown): string {
     return message;
 }
 
+const SSE_FIELD_RE = /^[a-zA-Z][a-zA-Z0-9-]*:/;
+
+function isSseFieldLine(line: string): boolean {
+    return SSE_FIELD_RE.test(line.trim());
+}
+
+/**
+ * Parse one SSE event block. Handles pretty-printed JSON where only the first
+ * line has a `data:` prefix and continuation lines are bare.
+ */
 function parseSseFrame(frame: string, onEvent: (eventType: string, data: string) => void): void {
     let eventType = 'message';
-    const dataLines: string[] = [];
+    const dataChunks: string[] = [];
 
-    for (const line of frame.split('\n')) {
-        const trimmedLine = line.replace(/\r$/, '');
-        if (!trimmedLine || trimmedLine.startsWith(':')) continue;
-        if (trimmedLine.startsWith('event:')) {
-            eventType = trimmedLine.slice(6).trim();
-        } else if (trimmedLine.startsWith('data:')) {
-            dataLines.push(trimmedLine.slice(5).trimStart());
+    for (const rawLine of frame.split('\n')) {
+        const line = rawLine.replace(/\r$/, '');
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith(':')) continue;
+
+        if (trimmed.startsWith('event:')) {
+            eventType = trimmed.slice(6).trim();
+            continue;
+        }
+
+        if (trimmed.startsWith('data:')) {
+            dataChunks.push(trimmed.slice(5).replace(/^\s/, ''));
+            continue;
+        }
+
+        if (isSseFieldLine(line)) continue;
+
+        if (dataChunks.length > 0) {
+            dataChunks[dataChunks.length - 1] += `\n${line}`;
         }
     }
 
-    if (dataLines.length > 0) {
-        onEvent(eventType, dataLines.join('\n'));
+    if (dataChunks.length > 0) {
+        onEvent(eventType, dataChunks.join('\n'));
     }
 }
 

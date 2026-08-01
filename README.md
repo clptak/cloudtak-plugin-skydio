@@ -17,6 +17,7 @@ See [`vendor/README.md`](vendor/README.md) for why and how to update it.
 2. Whitelist the hosts you configure in Settings (Skydio API, Authentik token URL, webhook SSE URL, and webhook POST URL).
 3. Skydio Cloud API token entered in the plugin Settings tab.
 4. Authentik **webhook-sse** OAuth2 client ID + secret, Authentik token URL, SSE URL, and webhook URL entered in Settings → Webhook SSE.
+   SSE auth failures that look like bad settings are often relay JWKS — see [docs/proxy-and-auth-troubleshooting.md](docs/proxy-and-auth-troubleshooting.md#webhook-sse-401--jwks).
 5. Skydio webhook registered to your configured webhook URL (Webhooks tab).
 6. **CORS** on webhook server `/events/*` for your CloudTAK origin (local dev: `http://localhost:8080`). Deploy `WebMvcConfig.kt` in your webhook server and reload your reverse proxy.
 
