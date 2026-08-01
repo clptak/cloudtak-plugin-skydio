@@ -1,7 +1,7 @@
 <template>
-    <div class='col-12 py-3'>
+    <div class='p-2 p-md-3'>
         <div
-            class='btn-group mb-3 w-100 skydio-tab-group'
+            class='btn-group mb-2 w-100 skydio-tab-group'
             role='group'
             aria-label='Skydio plugin tabs'
         >
@@ -277,8 +277,8 @@ watch(
 .skydio-tab-btn {
     flex: 1 1 0;
     min-width: 3.75rem;
-    min-height: 3rem;
-    padding: 0.75rem 1rem;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
 }
 
 .skydio-tab-logo {

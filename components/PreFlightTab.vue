@@ -1,5 +1,5 @@
 <template>
-    <div class='col-12 py-3'>
+    <div>
         <!-- Location / Airspace / Platform -->
         <div class='card mb-3'>
             <div

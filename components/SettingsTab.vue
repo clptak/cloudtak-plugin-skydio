@@ -1,5 +1,5 @@
 <template>
-    <div class='col-12 py-3'>
+    <div>
         <div class='card mb-3'>
             <div
                 class='card-header'

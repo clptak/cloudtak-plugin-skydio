@@ -1,5 +1,5 @@
 <template>
-    <div class='col-12 py-3'>
+    <div>
         <form @submit.prevent='searchFlights'>
             <div class='card mb-3'>
                 <div class='card-header'>

@@ -1,5 +1,5 @@
 <template>
-    <div class='col-12 py-3'>
+    <div>
         <div
             v-if='sseConfigured'
             class='card mb-3'
