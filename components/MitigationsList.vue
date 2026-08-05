@@ -3,20 +3,19 @@
         <div
             v-for='(entry, index) in model'
             :key='index'
-            class='input-group mb-2'
+            class='d-flex align-items-start gap-2 mb-2'
         >
-            <span class='input-group-text text-muted'>
+            <span class='text-muted pt-2 flex-shrink-0'>
                 {{ index + 1 }}
             </span>
-            <input
+            <TablerInput
                 v-model='model[index]'
-                type='text'
-                class='form-control'
+                class='flex-grow-1'
                 :placeholder='`${itemLabel} ${index + 1}`'
-            >
+            />
             <button
                 type='button'
-                class='btn btn-outline-danger'
+                class='btn btn-outline-danger flex-shrink-0'
                 :aria-label='`Remove ${itemLabel.toLowerCase()} ${index + 1}`'
                 @click='remove(index)'
             >
@@ -51,6 +50,7 @@
 
 <script setup lang="ts">
 import { IconPlus, IconX } from '@tabler/icons-vue';
+import { TablerInput } from '@tak-ps/vue-tabler';
 
 const model = defineModel<string[]>({ required: true });
 

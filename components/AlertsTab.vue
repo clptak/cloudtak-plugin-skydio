@@ -1,111 +1,111 @@
 <template>
     <div>
-        <div
+        <TablerBorder
             v-if='sseConfigured'
-            class='card mb-3'
+            class='cloudtak-accent text-white mb-3'
+            :fill-height='false'
+            :shadow='false'
+            gap='sm'
         >
-            <div class='card-header'>
-                <div class='card-title'>
+            <template #label>
+                <p class='text-uppercase text-white-50 small mb-0'>
                     Webhook SSE Connection
-                </div>
-            </div>
-            <div class='card-body'>
-                <div class='d-flex align-items-center mb-3'>
-                    <span
-                        class='status-dot me-2'
-                        :class='sseDotClass'
-                    />
-                    <span v-if='sseStatus.connected'>SSE connected</span>
-                    <span v-else-if='sseStatus.reconnecting'>SSE reconnecting…</span>
-                    <span v-else>SSE disconnected</span>
-                    <template v-if='sseStatus.lastEvent'>
-                        <span class='text-muted ms-1'>
-                            — last event {{ formatTime(sseStatus.lastEvent) }}
-                        </span>
-                    </template>
-                </div>
+                </p>
+            </template>
 
-                <label class='form-check'>
-                    <input
-                        v-model='local.flightStatusLogEnabled'
-                        class='form-check-input'
-                        type='checkbox'
-                        @change='saveAlertSettings'
-                    >
-                    <span class='form-check-label'>Log flight start/end (FLIGHT_START / FLIGHT_END) to active mission</span>
-                </label>
-            </div>
-        </div>
-
-        <div
-            v-else
-            class='card mb-3'
-        >
-            <div class='card-header'>
-                <div class='card-title'>
-                    Polling Settings (fallback)
-                </div>
-            </div>
-            <div class='card-body'>
-                <TablerInput
-                    v-model.number='intervalSeconds'
-                    label='Poll interval (seconds)'
-                    type='number'
-                    description='Used when webhook SSE credentials are not configured.'
-                    @change='saveAlertSettings'
+            <div class='d-flex align-items-center mb-3'>
+                <span
+                    class='status-dot me-2'
+                    :class='sseDotClass'
                 />
-
-                <label class='form-check mt-3'>
-                    <input
-                        v-model='local.pollingEnabled'
-                        class='form-check-input'
-                        type='checkbox'
-                        @change='saveAlertSettings'
-                    >
-                    <span class='form-check-label'>Enable polling-based alerts</span>
-                </label>
-
-                <div class='d-flex align-items-center mt-3'>
-                    <span
-                        class='status-dot me-2'
-                        :class='{ active: pollStatus.polling }'
-                    />
-                    <span v-if='pollStatus.polling'>
-                        Polling active
-                        <template v-if='pollStatus.lastPoll'>
-                            — last poll {{ formatTime(pollStatus.lastPoll) }}
-                        </template>
+                <span v-if='sseStatus.connected'>SSE connected</span>
+                <span v-else-if='sseStatus.reconnecting'>SSE reconnecting…</span>
+                <span v-else>SSE disconnected</span>
+                <template v-if='sseStatus.lastEvent'>
+                    <span class='text-muted ms-1'>
+                        — last event {{ formatTime(sseStatus.lastEvent) }}
                     </span>
-                    <span v-else>Polling stopped</span>
-                </div>
+                </template>
             </div>
-        </div>
+
+            <TablerToggle
+                v-model='local.flightStatusLogEnabled'
+                label='Log flight start/end (FLIGHT_START / FLIGHT_END) to active mission'
+                @update:model-value='saveAlertSettings'
+            />
+        </TablerBorder>
+
+        <TablerBorder
+            v-else
+            class='cloudtak-accent text-white mb-3'
+            :fill-height='false'
+            :shadow='false'
+            gap='sm'
+        >
+            <template #label>
+                <p class='text-uppercase text-white-50 small mb-0'>
+                    Polling Settings (fallback)
+                </p>
+            </template>
+
+            <TablerInput
+                v-model.number='intervalSeconds'
+                label='Poll Interval (seconds)'
+                type='number'
+                description='Used when webhook SSE credentials are not configured.'
+                @change='saveAlertSettings'
+            />
+
+            <TablerToggle
+                v-model='local.pollingEnabled'
+                class='mt-3'
+                label='Enable polling-based alerts'
+                @update:model-value='saveAlertSettings'
+            />
+
+            <div class='d-flex align-items-center mt-3'>
+                <span
+                    class='status-dot me-2'
+                    :class='{ active: pollStatus.polling }'
+                />
+                <span v-if='pollStatus.polling'>
+                    Polling active
+                    <template v-if='pollStatus.lastPoll'>
+                        — last poll {{ formatTime(pollStatus.lastPoll) }}
+                    </template>
+                </span>
+                <span v-else>Polling stopped</span>
+            </div>
+        </TablerBorder>
 
         <TablerAlert
             v-if='error'
             :err='proxyError'
         />
 
-        <div
+        <TablerInlineAlert
             v-if='!sseConfigured && !apiKeyConfigured'
-            class='alert alert-warning'
-        >
-            Configure webhook SSE credentials in Settings, or add a Skydio API key for polling fallback.
-        </div>
+            class='mb-3'
+            severity='warning'
+            title='Alerts Not Configured'
+            description='Configure webhook SSE credentials in Settings, or add a Skydio API key for polling fallback.'
+        />
 
-        <div
+        <TablerInlineAlert
             v-else-if='sseConfigured && !apiKeyConfigured'
-            class='alert alert-warning'
-        >
-            SSE alerts are configured. Add a Skydio API key in Settings to register webhooks below.
-        </div>
+            class='mb-3'
+            severity='warning'
+            title='API Key Recommended'
+            description='SSE alerts are configured. Add a Skydio API key in Settings to register webhooks below.'
+        />
 
-        <div
+        <TablerInlineAlert
             v-else-if='!sseConfigured && apiKeyConfigured && !pollStatus.polling'
-            class='alert alert-warning'
-        >
-            Configure webhook SSE credentials in Settings for real-time alerts, or enable polling above.
-        </div>
+            class='mb-3'
+            severity='warning'
+            title='Polling Stopped'
+            description='Configure webhook SSE credentials in Settings for real-time alerts, or enable polling above.'
+        />
 
         <div
             v-if='alerts.length === 0 && (sseConfigured || apiKeyConfigured)'
@@ -118,7 +118,7 @@
             <div
                 v-for='alert in alerts'
                 :key='alert.id'
-                class='border-bottom py-2'
+                class='cloudtak-accent border rounded-3 text-white px-2 py-2 mb-2'
             >
                 <div class='fw-bold text-capitalize'>
                     {{ formatType(alert.type) }}
@@ -135,7 +135,13 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { TablerInput, TablerAlert } from '@tak-ps/vue-tabler';
+import {
+    TablerBorder,
+    TablerInput,
+    TablerAlert,
+    TablerInlineAlert,
+    TablerToggle,
+} from '@tak-ps/vue-tabler';
 import type { SseStatus } from '../alerts/sse';
 import type { SkydioAlert, SkydioSettings } from '../types';
 

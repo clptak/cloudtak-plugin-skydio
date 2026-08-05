@@ -1,11 +1,11 @@
 <template>
     <div>
-        <div
+        <TablerInlineAlert
             v-if='!apiKey'
-            class='alert alert-warning'
-        >
-            Configure your API key in Settings first.
-        </div>
+            severity='warning'
+            title='API Key Required'
+            description='Configure your API key in Settings first.'
+        />
 
         <p
             v-if='cached && vehicles.length > 0 && loading'
@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { TablerLoading, TablerAlert } from '@tak-ps/vue-tabler';
+import { TablerLoading, TablerAlert, TablerInlineAlert } from '@tak-ps/vue-tabler';
 import type { SkydioVehicle } from '../types';
 
 defineProps<{

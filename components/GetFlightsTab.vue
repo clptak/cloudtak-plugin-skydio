@@ -1,117 +1,125 @@
 <template>
     <div>
         <form @submit.prevent='searchFlights'>
-            <div class='card mb-3'>
-                <div class='card-header'>
-                    <div class='card-title'>
+            <TablerBorder
+                class='cloudtak-accent text-white mb-3'
+                :fill-height='false'
+                :shadow='false'
+                gap='sm'
+            >
+                <template #label>
+                    <p class='text-uppercase text-white-50 small mb-0'>
                         Search Flights
-                    </div>
-                </div>
-                <div class='card-body'>
-                    <label class='form-label'>
-                        Vehicle serial (required)
-                    </label>
-                    <select
-                        v-model='selectedSerials'
-                        class='form-select'
-                        multiple
-                        required
-                        size='5'
+                    </p>
+                </template>
+
+                <label class='form-label'>
+                    Vehicle serial (required)
+                </label>
+                <select
+                    v-model='selectedSerials'
+                    class='form-select'
+                    multiple
+                    required
+                    size='5'
+                >
+                    <option
+                        v-for='vehicle in vehicles'
+                        :key='vehicle.vehicle_serial'
+                        :value='vehicle.vehicle_serial'
                     >
-                        <option
-                            v-for='vehicle in vehicles'
-                            :key='vehicle.vehicle_serial'
-                            :value='vehicle.vehicle_serial'
-                        >
-                            {{ vehicle.name }} ({{ vehicle.vehicle_serial }})
-                        </option>
-                    </select>
-                    <div class='form-hint'>
-                        Hold Cmd/Ctrl to select multiple vehicles. Load vehicles in Settings first.
-                    </div>
-
-                    <TablerInput
-                        v-model='takeoffSince'
-                        class='mt-3'
-                        label='Takeoff since (required)'
-                        type='datetime-local'
-                    />
-
-                    <TablerInput
-                        v-model='takeoffBefore'
-                        class='mt-3'
-                        label='Takeoff before (optional)'
-                        type='datetime-local'
-                    />
-
-                    <div class='mt-3'>
-                        <button
-                            type='submit'
-                            class='btn btn-primary'
-                            :disabled='loading || !apiKey || selectedSerials.length === 0 || !takeoffSince'
-                        >
-                            Get Flights
-                        </button>
-                    </div>
+                        {{ vehicle.name }} ({{ vehicle.vehicle_serial }})
+                    </option>
+                </select>
+                <div class='form-hint'>
+                    Hold Cmd/Ctrl to select multiple vehicles. Load vehicles in Settings first.
                 </div>
-            </div>
+
+                <TablerInput
+                    v-model='takeoffSince'
+                    class='mt-3'
+                    label='Takeoff Since (required)'
+                    type='datetime-local'
+                />
+
+                <TablerInput
+                    v-model='takeoffBefore'
+                    class='mt-3'
+                    label='Takeoff Before (optional)'
+                    type='datetime-local'
+                />
+
+                <div class='mt-3'>
+                    <button
+                        type='submit'
+                        class='btn btn-primary'
+                        :disabled='loading || !apiKey || selectedSerials.length === 0 || !takeoffSince'
+                    >
+                        Get Flights
+                    </button>
+                </div>
+            </TablerBorder>
         </form>
 
-        <div class='card mb-3'>
-            <div class='card-header'>
-                <div class='card-title'>
+        <TablerBorder
+            class='cloudtak-accent text-white mb-3'
+            :fill-height='false'
+            :shadow='false'
+            gap='sm'
+        >
+            <template #label>
+                <p class='text-uppercase text-white-50 small mb-0'>
                     Mission Planning
-                </div>
-            </div>
-            <div class='card-body'>
-                <p class='text-muted'>
-                    Draw a polygon or line on the map, then create a Skydio mission from it.
-                    A Polygon generates a Map Capture mission (download); a LineString generates a
-                    waypoint flight you can send to Skydio or download. Press Escape to cancel drawing.
                 </p>
+            </template>
 
-                <div class='mb-3 d-flex flex-wrap gap-2'>
-                    <button
-                        type='button'
-                        class='btn btn-outline-primary'
-                        :disabled='drawing'
-                        @click='drawMissionArea("polygon")'
-                    >
-                        {{ drawing && drawMode === "polygon" ? "Draw on map…" : "Draw Map Capture (Polygon)" }}
-                    </button>
-                    <button
-                        type='button'
-                        class='btn btn-outline-primary'
-                        :disabled='drawing'
-                        @click='drawMissionArea("linestring")'
-                    >
-                        {{ drawing && drawMode === "linestring" ? "Draw on map…" : "Draw Waypoint Route (Line)" }}
-                    </button>
-                </div>
+            <p class='text-muted'>
+                Draw a polygon or line on the map, then create a Skydio mission from it.
+                A Polygon generates a Map Capture mission (download); a LineString generates a
+                waypoint flight you can send to Skydio or download. Press Escape to cancel drawing.
+            </p>
 
-                <div class='mb-3'>
-                    <span class='text-muted'>Current geometry: </span>
-                    <span>{{ selectionLabel }}</span>
-                </div>
-
+            <div class='mb-3 d-flex flex-wrap gap-2'>
                 <button
                     type='button'
-                    class='btn btn-primary'
-                    :disabled='!canImport'
-                    @click='openModal'
+                    class='btn btn-outline-primary'
+                    :disabled='drawing'
+                    @click='drawMissionArea("polygon")'
                 >
-                    Create Mission from Drawing
+                    {{ drawing && drawMode === "polygon" ? "Draw on map…" : "Draw Map Capture (Polygon)" }}
                 </button>
-
-                <div
-                    v-if='missionNotice'
-                    class='alert mt-3'
-                    :class='missionNoticeIsError ? "alert-danger" : "alert-info"'
+                <button
+                    type='button'
+                    class='btn btn-outline-primary'
+                    :disabled='drawing'
+                    @click='drawMissionArea("linestring")'
                 >
-                    {{ missionNotice }}
-                </div>
+                    {{ drawing && drawMode === "linestring" ? "Draw on map…" : "Draw Waypoint Route (Line)" }}
+                </button>
             </div>
-        </div>
+
+            <div class='mb-3'>
+                <span class='text-muted'>Current geometry: </span>
+                <span>{{ selectionLabel }}</span>
+            </div>
+
+            <button
+                type='button'
+                class='btn btn-primary'
+                :disabled='!canImport'
+                @click='openModal'
+            >
+                Create Mission from Drawing
+            </button>
+
+            <TablerInlineAlert
+                v-if='missionNotice'
+                class='mt-3'
+                :severity='missionNoticeIsError ? "danger" : "info"'
+                :title='missionNoticeIsError ? "Mission Planning" : "Mission Ready"'
+                :description='missionNotice'
+            />
+        </TablerBorder>
 
         <div
             v-if='modalOpen'
@@ -194,12 +202,13 @@
             </div>
         </div>
 
-        <div
+        <TablerInlineAlert
             v-if='!apiKey'
-            class='alert alert-warning'
-        >
-            Configure your API key in Settings first.
-        </div>
+            class='mb-3'
+            severity='warning'
+            title='API Key Required'
+            description='Configure your API key in Settings first.'
+        />
 
         <TablerLoading
             v-if='loading'
@@ -212,137 +221,118 @@
             :err='error'
         />
 
-        <div
+        <TablerBorder
             v-if='flights.length > 0'
-            class='card'
+            class='cloudtak-accent text-white'
+            :fill-height='false'
+            :shadow='false'
+            gap='sm'
         >
-            <div class='card-header'>
-                <div class='card-title'>
+            <template #label>
+                <p class='text-uppercase text-white-50 small mb-0'>
                     Flights
-                </div>
-            </div>
-            <div class='card-body'>
-                <div
-                    v-for='flight in flights'
-                    :key='flight.flight_id'
-                    class='form-check'
-                >
-                    <input
-                        :id='flight.flight_id'
-                        v-model='selectedFlightIds'
-                        class='form-check-input'
-                        type='checkbox'
-                        :value='flight.flight_id'
-                    >
-                    <label
-                        class='form-check-label'
-                        :for='flight.flight_id'
-                    >
-                        {{ flightLabel(flight.vehicle_serial, flight.takeoff) }}
-                    </label>
-                </div>
-
-                <div class='mt-3'>
-                    <label class='form-label'>
-                        Elevation (Z)
-                    </label>
-                    <select
-                        v-model='elevationSource'
-                        class='form-select'
-                    >
-                        <option value='height_above_takeoff'>
-                            Height above takeoff → MSL
-                        </option>
-                        <option value='gps_altitude'>
-                            GPS altitude (MSL)
-                        </option>
-                    </select>
-                    <div class='form-hint mt-1'>
-                        GeoJSON Z is always MSL meters. Takeoff→MSL uses takeoff GPS altitude plus
-                        height above takeoff (e.g. ~60 m AGL → ~1659 m MSL, not 60 m on the map).
-                    </div>
-                </div>
-
-                <div class='mt-3'>
-                    <label class='form-label'>
-                        Import mode
-                    </label>
-                    <select
-                        v-model='importMode'
-                        class='form-select'
-                    >
-                        <option value='line'>
-                            Line route
-                        </option>
-                        <option value='points'>
-                            Points (full HAE per fix)
-                        </option>
-                        <option value='both'>
-                            Both line and points
-                        </option>
-                    </select>
-                    <div class='form-hint mt-1'>
-                        Use Points/Both to preserve per-fix HAE through Node-CoT import.
-                    </div>
-                </div>
-
-                <div class='mt-3'>
-                    <button
-                        type='button'
-                        class='btn btn-primary'
-                        :disabled='downloading || selectedFlightIds.length === 0'
-                        @click='downloadTelemetry'
-                    >
-                        Download Telemetry
-                    </button>
-                    <button
-                        type='button'
-                        class='btn btn-secondary ms-2'
-                        :disabled='importing || selectedFlightIds.length === 0'
-                        @click='importTelemetryToMap'
-                    >
-                        Import to Map
-                    </button>
-                </div>
-
-                <p class='form-hint mt-2'>
-                    Large flights use your webhook telemetry relay (Settings → Telemetry Relay URL, or the same base as Skydio SSE URL).
-                    The relay must expose GET {base}/telemetry/{flightId} with CORS for this CloudTAK site — see relay-server/ in the plugin repo.
                 </p>
+            </template>
 
-                <TablerLoading
-                    v-if='downloading'
-                    class='mt-3'
-                    :compact='true'
-                    desc='Downloading telemetry…'
-                />
-
-                <TablerAlert
-                    v-if='downloadError'
-                    class='mt-3'
-                    :err='downloadError'
-                />
-
-                <TablerLoading
-                    v-if='importing'
-                    class='mt-3'
-                    :compact='true'
-                    desc='Preparing GeoJSON for import…'
-                />
-
-                <TablerAlert
-                    v-if='importError'
-                    class='mt-3'
-                    :err='importError'
-                />
+            <div
+                v-for='flight in flights'
+                :key='flight.flight_id'
+                class='form-check'
+            >
+                <input
+                    :id='flight.flight_id'
+                    v-model='selectedFlightIds'
+                    class='form-check-input'
+                    type='checkbox'
+                    :value='flight.flight_id'
+                >
+                <label
+                    class='form-check-label'
+                    :for='flight.flight_id'
+                >
+                    {{ flightLabel(flight.vehicle_serial, flight.takeoff) }}
+                </label>
             </div>
-        </div>
+
+            <TablerEnum
+                v-model='elevationSourceLabel'
+                class='mt-3'
+                label='Elevation (Z)'
+                description='GeoJSON Z is always MSL meters. Takeoff→MSL uses takeoff GPS altitude plus height above takeoff (e.g. ~60 m AGL → ~1659 m MSL, not 60 m on the map).'
+                :options='elevationOptions'
+            />
+
+            <TablerEnum
+                v-model='importModeLabel'
+                class='mt-3'
+                label='Import Mode'
+                description='Use Points/Both to preserve per-fix HAE through Node-CoT import.'
+                :options='importModeOptions'
+            />
+
+            <div class='mt-3'>
+                <button
+                    type='button'
+                    class='btn btn-primary'
+                    :disabled='downloading || selectedFlightIds.length === 0'
+                    @click='downloadTelemetry'
+                >
+                    Download Telemetry
+                </button>
+                <button
+                    type='button'
+                    class='btn btn-secondary ms-2'
+                    :disabled='importing || selectedFlightIds.length === 0'
+                    @click='importTelemetryToMap'
+                >
+                    Import to Map
+                </button>
+            </div>
+
+            <p class='form-hint mt-2'>
+                Large flights use your webhook telemetry relay (Settings → Telemetry Relay URL, or the same base as Skydio SSE URL).
+                The relay must expose GET {base}/telemetry/{flightId} with CORS for this CloudTAK site — see relay-server/ in the plugin repo.
+            </p>
+
+            <TablerLoading
+                v-if='downloading'
+                class='mt-3'
+                :compact='true'
+                desc='Downloading telemetry…'
+            />
+
+            <TablerAlert
+                v-if='downloadError'
+                class='mt-3'
+                :err='downloadError'
+            />
+
+            <TablerLoading
+                v-if='importing'
+                class='mt-3'
+                :compact='true'
+                desc='Preparing GeoJSON for import…'
+            />
+
+            <TablerAlert
+                v-if='importError'
+                class='mt-3'
+                :err='importError'
+            />
+        </TablerBorder>
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
-import { TablerInput, TablerLoading, TablerAlert } from '@tak-ps/vue-tabler';
+import {
+    TablerBorder,
+    TablerEnum,
+    TablerInput,
+    TablerLoading,
+    TablerAlert,
+    TablerInlineAlert,
+} from '@tak-ps/vue-tabler';
 import { createMissionTemplate, getFlightTelemetry, listFlights } from '../api/client';
 import { ProxyError } from '../api/proxy';
 import type { SkydioFlight, SkydioVehicle } from '../types';
@@ -377,6 +367,20 @@ const props = defineProps<{
     skydioSseUrl: string;
 }>();
 
+const ELEVATION_OPTIONS = [
+    { value: 'height_above_takeoff' as const, label: 'Height above takeoff → MSL' },
+    { value: 'gps_altitude' as const, label: 'GPS altitude (MSL)' },
+];
+
+const IMPORT_MODE_OPTIONS = [
+    { value: 'line' as const, label: 'Line route' },
+    { value: 'points' as const, label: 'Points (full HAE per fix)' },
+    { value: 'both' as const, label: 'Both line and points' },
+];
+
+const elevationOptions = ELEVATION_OPTIONS.map((o) => o.label);
+const importModeOptions = IMPORT_MODE_OPTIONS.map((o) => o.label);
+
 function effectiveTelemetryRelayUrl(): string {
     return resolveSkydioTelemetryRelayUrl(props.telemetryRelayUrl, props.skydioSseUrl);
 }
@@ -402,6 +406,24 @@ const elevationSource = ref<TelemetryElevationSource>('height_above_takeoff');
 const error = ref<Error | undefined>();
 const downloadError = ref<Error | undefined>();
 const importError = ref<Error | undefined>();
+
+const elevationSourceLabel = computed({
+    get: () => ELEVATION_OPTIONS.find((o) => o.value === elevationSource.value)?.label
+        ?? ELEVATION_OPTIONS[0].label,
+    set: (label: string) => {
+        const match = ELEVATION_OPTIONS.find((o) => o.label === label);
+        if (match) elevationSource.value = match.value;
+    },
+});
+
+const importModeLabel = computed({
+    get: () => IMPORT_MODE_OPTIONS.find((o) => o.value === importMode.value)?.label
+        ?? IMPORT_MODE_OPTIONS[0].label,
+    set: (label: string) => {
+        const match = IMPORT_MODE_OPTIONS.find((o) => o.label === label);
+        if (match) importMode.value = match.value;
+    },
+});
 
 const drawnFeature = ref<Feature | null>(null);
 const drawing = ref(false);

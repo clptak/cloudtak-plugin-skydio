@@ -1,36 +1,31 @@
 <template>
-    <div class='p-2 p-md-3'>
-        <div
-            class='btn-group mb-2 w-100 skydio-tab-group'
-            role='group'
-            aria-label='Skydio plugin tabs'
+    <div class='skydio-pane px-3 py-3'>
+        <TablerPillGroup
+            v-model='activeTab'
+            :options='tabOptions'
+            name='skydio-tabs'
         >
-            <button
-                v-for='tab in tabs'
-                :key='tab.value'
-                type='button'
-                class='btn skydio-tab-btn d-inline-flex align-items-center justify-content-center'
-                :class='activeTab === tab.value ? "btn-primary" : "btn-outline-primary"'
-                :title='tab.title'
-                @click='activeTab = tab.value'
-            >
-                <img
-                    v-if='tab.image'
-                    :src='tab.image'
-                    alt=''
-                    class='skydio-tab-logo'
-                >
-                <component
-                    :is='tab.icon'
-                    v-else
-                    :size='27'
-                    stroke='1.5'
-                />
-            </button>
-        </div>
+            <template #option='{ option }'>
+                <span :title='option.label'>
+                    <img
+                        v-if='tabImages[option.value]'
+                        :src='tabImages[option.value]'
+                        alt=''
+                        class='skydio-tab-logo'
+                    >
+                    <component
+                        :is='tabIcons[option.value]'
+                        v-else
+                        :size='32'
+                        stroke='1'
+                    />
+                </span>
+            </template>
+        </TablerPillGroup>
 
         <SettingsTab
             v-if='activeTab === "settings"'
+            class='mt-2'
             :settings='settings'
             :vehicles='vehicles'
             :vehicles-loading='vehiclesLoading'
@@ -41,11 +36,13 @@
         />
         <PreFlightTab
             v-else-if='activeTab === "preflight"'
+            class='mt-2'
             :mission-guid='mapStore.mission?.meta.guid'
             :mission-token='mapStore.mission?.missiontoken'
         />
         <GetFlightsTab
             v-else-if='activeTab === "flights"'
+            class='mt-2'
             :api-key='settings.apiKey'
             :vehicles='vehicles'
             :telemetry-relay-url='settings.skydioTelemetryRelayUrl'
@@ -53,6 +50,7 @@
         />
         <AlertsTab
             v-else-if='activeTab === "alerts"'
+            class='mt-2'
             :settings='settings'
             :alerts='alerts'
             :sse-status='sseStatus'
@@ -72,6 +70,7 @@ import {
     IconMessageExclamation,
     IconSettings,
 } from '@tabler/icons-vue';
+import { TablerPillGroup } from '@tak-ps/vue-tabler';
 import skydioLogo from './skydio_logo.svg';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { useMapStore } from '../../../src/stores/map.ts';
@@ -90,13 +89,6 @@ import { AlertPoller } from '../alerts/polling';
 import { SkydioSseClient, type SseStatus } from '../alerts/sse';
 import { hasSseConfig, type SkydioAlert, type SkydioSettings, type SkydioVehicle, type SkydioWebhookAlert } from '../types';
 
-interface SkydioTabOption {
-    value: string;
-    title: string;
-    icon?: Component;
-    image?: string;
-}
-
 async function logFlightStatusToMission(
     alert: SkydioWebhookAlert,
     message: string,
@@ -112,12 +104,22 @@ async function logFlightStatusToMission(
     });
 }
 
-const tabs: SkydioTabOption[] = [
-    { value: 'preflight', title: 'Pre-Flight', icon: IconChecklist },
-    { value: 'flights', title: 'Skydio Cloud', image: skydioLogo },
-    { value: 'alerts', title: 'Skydio Alerts', icon: IconMessageExclamation },
-    { value: 'settings', title: 'Settings', icon: IconSettings },
+const tabOptions = [
+    { value: 'preflight', label: 'Pre-Flight' },
+    { value: 'flights', label: 'Skydio Cloud' },
+    { value: 'alerts', label: 'Skydio Alerts' },
+    { value: 'settings', label: 'Settings' },
 ];
+
+const tabIcons: Record<string, Component> = {
+    preflight: IconChecklist,
+    alerts: IconMessageExclamation,
+    settings: IconSettings,
+};
+
+const tabImages: Record<string, string> = {
+    flights: skydioLogo,
+};
 
 const mapStore = useMapStore();
 const activeTab = ref('preflight');
@@ -270,21 +272,26 @@ watch(
 </script>
 
 <style scoped>
-.skydio-tab-group {
-    flex-wrap: nowrap;
+.skydio-pane {
+    /* Match Mission Info insets; Tabler form surfaces are primary-tinted */
+    --tabler-input-bg: var(--cloudtak-inset-bg);
+    --tblr-bg-forms: var(--cloudtak-inset-bg);
 }
 
-.skydio-tab-btn {
-    flex: 1 1 0;
-    min-width: 3.75rem;
-    min-height: 2.5rem;
-    padding: 0.5rem 0.75rem;
+.skydio-pane :deep(.cloudtak-bg),
+.skydio-pane :deep(.card) {
+    background-color: var(--cloudtak-inset-bg) !important;
+    border-color: var(--cloudtak-inset-border);
+}
+
+.skydio-pane :deep(.card-header) {
+    background-color: transparent !important;
 }
 
 .skydio-tab-logo {
     display: block;
-    width: 27px;
-    height: 27px;
+    width: 32px;
+    height: 32px;
     object-fit: contain;
 }
 </style>

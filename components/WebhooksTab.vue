@@ -6,29 +6,36 @@
             are configured above.
         </p>
 
-        <div
+        <TablerInlineAlert
             v-if='!apiKey'
-            class='alert alert-warning'
-        >
-            Configure your API key in Settings first.
-        </div>
+            severity='warning'
+            title='API Key Required'
+            description='Configure your API key in Settings first.'
+        />
 
         <template v-else>
-            <div
+            <TablerInlineAlert
                 v-if='!configuredWebhookUrl'
-                class='alert alert-warning'
-            >
-                Set Skydio Webhook URL in Settings before registering webhooks.
-            </div>
+                class='mb-3'
+                severity='warning'
+                title='Webhook URL Required'
+                description='Set Skydio Webhook URL in Settings before registering webhooks.'
+            />
 
-            <div
+            <TablerInlineAlert
                 v-else-if='showCreatePrompt'
-                class='alert alert-info'
+                class='mb-3'
+                severity='info'
+                title='No Matching Webhook'
+                :description='`No webhook points at ${configuredWebhookUrl}.`'
+            />
+            <div
+                v-if='showCreatePrompt'
+                class='mb-3'
             >
-                No webhook points at {{ configuredWebhookUrl }}.
                 <button
                     type='button'
-                    class='btn btn-sm btn-primary ms-2'
+                    class='btn btn-sm btn-primary'
                     :disabled='loading'
                     @click='createDefault'
                 >
@@ -36,39 +43,43 @@
                 </button>
             </div>
 
-            <div class='card mb-3'>
-                <div class='card-header'>
-                    <div class='card-title'>
+            <TablerBorder
+                class='cloudtak-accent text-white mb-3'
+                :fill-height='false'
+                :shadow='false'
+                gap='sm'
+            >
+                <template #label>
+                    <p class='text-uppercase text-white-50 small mb-0'>
                         Create Webhook
-                    </div>
-                </div>
-                <div class='card-body'>
-                    <TablerInput
-                        v-model='form.name'
-                        label='Name'
-                        placeholder='CloudTAK webhook'
-                        description='Display name in Skydio Cloud (max 128 characters)'
-                    />
-                    <TablerInput
-                        v-model='form.url'
-                        class='mt-3'
-                        label='URL'
-                        placeholder='https://webhook.example.com/api/skydio'
-                        description='Register this URL in Skydio so events reach your webhook server and SSE stream.'
-                    />
+                    </p>
+                </template>
 
-                    <div class='d-flex align-items-center mt-3'>
-                        <button
-                            type='button'
-                            class='btn btn-primary'
-                            :disabled='loading || !canCreate'
-                            @click='create'
-                        >
-                            Create Webhook
-                        </button>
-                    </div>
+                <TablerInput
+                    v-model='form.name'
+                    label='Name'
+                    placeholder='CloudTAK webhook'
+                    description='Display name in Skydio Cloud (max 128 characters)'
+                />
+                <TablerInput
+                    v-model='form.url'
+                    class='mt-3'
+                    label='URL'
+                    placeholder='https://webhook.example.com/api/skydio'
+                    description='Register this URL in Skydio so events reach your webhook server and SSE stream.'
+                />
+
+                <div class='d-flex align-items-center mt-3'>
+                    <button
+                        type='button'
+                        class='btn btn-primary'
+                        :disabled='loading || !canCreate'
+                        @click='create'
+                    >
+                        Create Webhook
+                    </button>
                 </div>
-            </div>
+            </TablerBorder>
 
             <TablerLoading
                 v-if='loading'
@@ -82,19 +93,25 @@
                 :err='error'
             />
 
-            <div
+            <TablerInlineAlert
                 v-if='success'
-                class='alert alert-success mt-3'
-            >
-                {{ success }}
-            </div>
+                class='mt-3'
+                severity='success'
+                title='Webhook Registered'
+                :description='success'
+            />
 
-            <div class='card mt-3'>
-                <div class='card-header'>
-                    <div class='card-title'>
-                        Registered Webhooks
-                    </div>
-                    <div class='card-actions'>
+            <TablerBorder
+                class='cloudtak-accent text-white mt-3'
+                :fill-height='false'
+                :shadow='false'
+                gap='sm'
+            >
+                <template #label>
+                    <div class='d-flex align-items-center justify-content-between w-100'>
+                        <p class='text-uppercase text-white-50 small mb-0'>
+                            Registered Webhooks
+                        </p>
                         <button
                             type='button'
                             class='btn btn-sm btn-secondary'
@@ -104,41 +121,46 @@
                             Refresh
                         </button>
                     </div>
-                </div>
-                <div class='card-body'>
-                    <div
-                        v-if='webhooks.length === 0 && !loading'
-                        class='text-muted'
-                    >
-                        No webhooks registered.
-                    </div>
+                </template>
 
-                    <template v-else>
-                        <div
-                            v-for='wh in webhooks'
-                            :key='wh.id'
-                            class='border-bottom py-2'
-                        >
-                            <div class='fw-bold'>
-                                {{ wh.name }}
-                            </div>
-                            <div class='small text-muted text-break'>
-                                {{ wh.url }}
-                            </div>
-                            <div class='small font-monospace text-muted'>
-                                {{ wh.id }}
-                            </div>
-                        </div>
-                    </template>
+                <div
+                    v-if='webhooks.length === 0 && !loading'
+                    class='text-muted'
+                >
+                    No webhooks registered.
                 </div>
-            </div>
+
+                <template v-else>
+                    <div
+                        v-for='wh in webhooks'
+                        :key='wh.id'
+                        class='cloudtak-accent border rounded-3 text-white px-2 py-2 mb-2'
+                    >
+                        <div class='fw-bold'>
+                            {{ wh.name }}
+                        </div>
+                        <div class='small text-muted text-break'>
+                            {{ wh.url }}
+                        </div>
+                        <div class='small font-monospace text-muted'>
+                            {{ wh.id }}
+                        </div>
+                    </div>
+                </template>
+            </TablerBorder>
         </template>
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, reactive, watch, onMounted } from 'vue';
-import { TablerInput, TablerLoading, TablerAlert } from '@tak-ps/vue-tabler';
+import {
+    TablerBorder,
+    TablerInput,
+    TablerLoading,
+    TablerAlert,
+    TablerInlineAlert,
+} from '@tak-ps/vue-tabler';
 import { createWebhook, listWebhooks } from '../api/client';
 import { ProxyError } from '../api/proxy';
 import type { SkydioSettings, SkydioWebhook } from '../types';
