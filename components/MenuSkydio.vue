@@ -1,6 +1,6 @@
 <template>
     <MenuTemplate name='Skydio'>
-        <template #title>
+        <template #header>
             <div class='d-flex align-items-center gap-2 px-2'>
                 <img
                     :src='skydioLogo'

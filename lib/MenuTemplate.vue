@@ -1,4 +1,3 @@
-<!-- Fork of CloudTAK MenuTemplate with optional #title / #header slots (logo + label). -->
 <template>
     <TablerModal
         v-if='isModal'
@@ -20,18 +19,12 @@
                 </TablerIconButton>
 
                 <div
-                    v-if='hasCustomTitle'
-                    class='flex-grow-1 d-flex align-items-center gap-2 px-1'
+                    v-if='$slots.header'
+                    class='flex-grow-1 d-flex align-items-center'
                     style='min-width: 0'
                 >
                     <slot
-                        v-if='$slots.header'
                         name='header'
-                        :is-modal='true'
-                    />
-                    <slot
-                        v-else
-                        name='title'
                         :is-modal='true'
                     />
                 </div>
@@ -116,18 +109,12 @@
                     <div v-else />
 
                     <div
-                        v-if='hasCustomTitle'
-                        class='flex-grow-1 d-flex align-items-center gap-2 px-2'
+                        v-if='$slots.header'
+                        class='flex-grow-1 d-flex align-items-center'
                         style='min-width: 0'
                     >
                         <slot
-                            v-if='$slots.header'
                             name='header'
-                            :is-modal='false'
-                        />
-                        <slot
-                            v-else
-                            name='title'
                             :is-modal='false'
                         />
                     </div>
@@ -169,40 +156,42 @@
 </template>
 
 <script setup lang='ts'>
+
 import {
     TablerNone,
     TablerModal,
     TablerLoading,
     TablerIconButton,
 } from '@tak-ps/vue-tabler';
+
 import {
     IconCircleX,
-    IconCircleArrowLeft,
+    IconCircleArrowLeft
 } from '@tabler/icons-vue';
-import { useRouter } from 'vue-router';
-import { computed, useSlots } from 'vue';
-import { useAppStore } from '@/stores/app.ts';
 
-const router = useRouter();
+import { useRouter } from 'vue-router'
+import { computed } from 'vue';
+import { useAppStore } from '../../../src/stores/app.ts';
+
+const router = useRouter()
 const appStore = useAppStore();
-const slots = useSlots();
 
 const props = defineProps({
     name: {
         type: String,
-        default: '',
+        default: ''
     },
     zindex: {
         type: Number,
-        default: 1020,
+        default: 1020
     },
     border: {
         type: Boolean,
-        default: true,
+        default: true
     },
     back: {
         type: Boolean,
-        default: true,
+        default: true
     },
     loading: {
         type: Boolean,
@@ -219,41 +208,48 @@ const props = defineProps({
     scroll: {
         type: Boolean,
         default: true,
-    },
+    }
 });
 
-const hasCustomTitle = computed(() => Boolean(slots.header || slots.title));
-
-function routerBack(): void {
+function routerBack() {
     if (!router.options.history.state.back || String(router.options.history.state.back).startsWith('/login')) {
-        router.push('/');
+        router.push("/")
     } else {
         router.back();
     }
 }
 
 const backType = computed(() => {
-    if (!props.back) return 'none';
+    if (!props.back) return "none";
 
     if (
         !router.options.history.state.back
         || router.options.history.state.back === '/'
     ) {
-        return 'close';
+        return 'close'
+    } else {
+        return 'back'
     }
-    return 'back';
 });
 
 const isModal = computed(() => props.standalone && appStore.isMobileDetected);
 </script>
 
 <style scoped>
+/* Mobile standalone menu is shown as a near-fullscreen modal with a single header.
+ * The status bar inset is subtracted twice to keep the centered modal's top edge
+ * clear of the transparent native status bar. */
 .main-menu-modal-frame {
-    height: calc(100dvh - 2rem);
-    max-height: calc(100dvh - 2rem);
+    height: calc(100dvh - 2rem - 2 * var(--status-bar-height, 0px));
+    max-height: calc(100dvh - 2rem - 2 * var(--status-bar-height, 0px));
 }
 
+/*
+ * Spacer (not padding-bottom, which is ignored on overflow-y:auto flex containers)
+ * keeps the last item clear of device intrusions via env(safe-area-inset-bottom).
+ */
 .menu-scroll-spacer {
     height: calc(env(safe-area-inset-bottom, 0px) + 32px);
 }
 </style>
+

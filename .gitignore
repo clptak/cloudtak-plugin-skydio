@@ -6,3 +6,5 @@ plugin_context/
 *backup*
 node_modules
 .DS_Store.cursor/
+.DS_Store
+
