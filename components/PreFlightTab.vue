@@ -1,23 +1,26 @@
 <template>
     <div>
         <!-- Location / Airspace / Platform -->
-        <div class='card mb-3'>
-            <div
-                class='card-header'
-                style='cursor: pointer;'
-                @click='locationOpen = !locationOpen'
-            >
-                <div class='card-title'>
-                    Location | Airspace | Platform
-                </div>
-                <div class='card-actions'>
+        <TablerBorder
+            class='cloudtak-accent text-white mb-3'
+            :fill-height='false'
+            :shadow='false'
+            gap='sm'
+        >
+            <template #label>
+                <div
+                    class='d-flex align-items-center justify-content-between w-100'
+                    style='cursor: pointer;'
+                    @click='locationOpen = !locationOpen'
+                >
+                    <p class='text-uppercase text-white-50 small mb-0'>
+                        Location | Airspace | Platform
+                    </p>
                     <CollapseChevron :open='locationOpen' />
                 </div>
-            </div>
-            <div
-                v-if='locationOpen'
-                class='card-body'
-            >
+            </template>
+
+            <div v-if='locationOpen'>
                 <div class='mb-3'>
                     <span class='text-muted'>Location: </span>
                     <span>{{ form.location || 'No point selected.' }}</span>
@@ -67,13 +70,13 @@
                             Inspect overlays at point
                         </button>
                     </div>
-                    <div
+                    <TablerInlineAlert
                         v-if='detectNotice'
-                        class='alert mt-2 mb-0'
-                        :class='detectError ? "alert-danger" : "alert-success"'
-                    >
-                        {{ detectNotice }}
-                    </div>
+                        class='mt-2'
+                        :severity='detectError ? "danger" : "success"'
+                        :title='detectError ? "Detect Issue" : "Detect Complete"'
+                        :description='detectNotice'
+                    />
 
                     <div
                         v-if='inspectResults.length'
@@ -86,24 +89,22 @@
                         <div
                             v-for='(hit, idx) in inspectResults'
                             :key='idx'
-                            class='card card-sm mb-2'
+                            class='cloudtak-accent border rounded-3 text-white px-2 py-2 mb-2'
                         >
-                            <div class='card-body'>
-                                <div>
-                                    Stable id: <strong><code>{{ hit.stableLayerId }}</code></strong>
-                                </div>
-                                <div class='text-muted small'>
-                                    full: <code>{{ hit.layerId }}</code> · source: {{ hit.source || '∅' }}
-                                </div>
-                                <ul class='mb-0 mt-1'>
-                                    <li
-                                        v-for='(val, key) in hit.properties'
-                                        :key='key'
-                                    >
-                                        <code>{{ key }}</code>: {{ String(val) }}
-                                    </li>
-                                </ul>
+                            <div>
+                                Stable id: <strong><code>{{ hit.stableLayerId }}</code></strong>
                             </div>
+                            <div class='text-muted small'>
+                                full: <code>{{ hit.layerId }}</code> · source: {{ hit.source || '∅' }}
+                            </div>
+                            <ul class='mb-0 mt-1'>
+                                <li
+                                    v-for='(val, key) in hit.properties'
+                                    :key='key'
+                                >
+                                    <code>{{ key }}</code>: {{ String(val) }}
+                                </li>
+                            </ul>
                         </div>
                     </div>
 
@@ -152,22 +153,12 @@
                     label='DEMA (State SAR Mission #)'
                 />
 
-                <label class='form-label mt-3'>Airspace Class</label>
-                <select
-                    v-model='form.airspaceClass'
-                    class='form-select'
-                >
-                    <option value=''>
-                        Select…
-                    </option>
-                    <option
-                        v-for='cls in AIRSPACE_CLASSES'
-                        :key='cls'
-                        :value='cls'
-                    >
-                        {{ cls }}
-                    </option>
-                </select>
+                <TablerEnum
+                    v-model='airspaceClassSelection'
+                    class='mt-3'
+                    label='Airspace Class'
+                    :options='airspaceClassOptions'
+                />
 
                 <TablerInput
                     v-model.number='form.maxAltitudeAglFt'
@@ -176,22 +167,12 @@
                     label='Maximum Permitted Altitude (AGL) — ft'
                 />
 
-                <label class='form-label mt-3'>LAANC Required</label>
-                <select
-                    v-model='form.laancRequired'
-                    class='form-select'
-                >
-                    <option value=''>
-                        Select…
-                    </option>
-                    <option
-                        v-for='opt in YES_NO'
-                        :key='opt'
-                        :value='opt'
-                    >
-                        {{ opt }}
-                    </option>
-                </select>
+                <TablerEnum
+                    v-model='laancRequiredSelection'
+                    class='mt-3'
+                    label='LAANC Required'
+                    :options='yesNoOptions'
+                />
 
                 <TablerInput
                     v-model='form.laancAuthNumber'
@@ -205,110 +186,63 @@
                     label='Airspace: Special'
                 />
 
-                <label class='form-label mt-3'>Platform (drone for performance check)</label>
-                <select
-                    v-model='form.platform'
-                    class='form-select'
-                >
-                    <option value=''>
-                        Select…
-                    </option>
-                    <option
-                        v-for='platform in config.platforms'
-                        :key='platform.name'
-                        :value='platform.name'
-                    >
-                        {{ platform.name }}{{ platform.specs ? ' (specs available)' : '' }}
-                    </option>
-                </select>
+                <TablerEnum
+                    v-model='platformSelection'
+                    class='mt-3'
+                    label='Platform'
+                    description='Drone used for the performance check below.'
+                    :options='platformOptions'
+                />
             </div>
-        </div>
+        </TablerBorder>
 
         <!-- Flight Type -->
-        <div class='card mb-3'>
-            <div
-                class='card-header'
-                style='cursor: pointer;'
-                @click='flightTypeOpen = !flightTypeOpen'
-            >
-                <div class='card-title'>
-                    Flight Type
-                </div>
-                <div class='card-actions'>
+        <TablerBorder
+            class='cloudtak-accent text-white mb-3'
+            :fill-height='false'
+            :shadow='false'
+            gap='sm'
+        >
+            <template #label>
+                <div
+                    class='d-flex align-items-center justify-content-between w-100'
+                    style='cursor: pointer;'
+                    @click='flightTypeOpen = !flightTypeOpen'
+                >
+                    <p class='text-uppercase text-white-50 small mb-0'>
+                        Flight Type
+                    </p>
                     <CollapseChevron :open='flightTypeOpen' />
                 </div>
-            </div>
-            <div
-                v-if='flightTypeOpen'
-                class='card-body'
-            >
-                <label class='form-label'>Flight Category</label>
-                <select
-                    v-model='form.flightCategory'
-                    class='form-select'
-                >
-                    <option value=''>
-                        Select…
-                    </option>
-                    <option
-                        v-for='opt in FLIGHT_CATEGORIES'
-                        :key='opt'
-                        :value='opt'
-                    >
-                        {{ opt }}
-                    </option>
-                </select>
+            </template>
 
-                <label class='form-label mt-3'>Mission Type</label>
-                <select
-                    v-model='form.missionType'
-                    class='form-select'
-                >
-                    <option value=''>
-                        Select…
-                    </option>
-                    <option
-                        v-for='opt in MISSION_TYPES'
-                        :key='opt'
-                        :value='opt'
-                    >
-                        {{ opt }}
-                    </option>
-                </select>
+            <div v-if='flightTypeOpen'>
+                <TablerEnum
+                    v-model='flightCategorySelection'
+                    label='Flight Category'
+                    :options='flightCategoryOptions'
+                />
 
-                <label class='form-label mt-3'>Flight Rule</label>
-                <select
-                    v-model='form.flightRule'
-                    class='form-select'
-                >
-                    <option value=''>
-                        Select…
-                    </option>
-                    <option
-                        v-for='opt in FLIGHT_RULES'
-                        :key='opt'
-                        :value='opt'
-                    >
-                        {{ opt }}
-                    </option>
-                </select>
+                <TablerEnum
+                    v-model='missionTypeSelection'
+                    class='mt-3'
+                    label='Mission Type'
+                    :options='missionTypeOptions'
+                />
 
-                <label class='form-label mt-3'>Land Manager / Owner</label>
-                <select
-                    v-model='form.landManager'
-                    class='form-select'
-                >
-                    <option value=''>
-                        Select…
-                    </option>
-                    <option
-                        v-for='manager in config.landManagers'
-                        :key='manager'
-                        :value='manager'
-                    >
-                        {{ manager }}
-                    </option>
-                </select>
+                <TablerEnum
+                    v-model='flightRuleSelection'
+                    class='mt-3'
+                    label='Flight Rule'
+                    :options='flightRuleOptions'
+                />
+
+                <TablerEnum
+                    v-model='landManagerSelection'
+                    class='mt-3'
+                    label='Land Manager / Owner'
+                    :options='landManagerOptions'
+                />
                 <div
                     v-if='config.landManagers.length === 0'
                     class='form-hint mt-1'
@@ -316,22 +250,12 @@
                     Upload a config file to populate this list.
                 </div>
 
-                <label class='form-label mt-3'>Land Manager Permission Required</label>
-                <select
-                    v-model='form.landManagerPermissionRequired'
-                    class='form-select'
-                >
-                    <option value=''>
-                        Select…
-                    </option>
-                    <option
-                        v-for='opt in YES_NO'
-                        :key='opt'
-                        :value='opt'
-                    >
-                        {{ opt }}
-                    </option>
-                </select>
+                <TablerEnum
+                    v-model='landManagerPermissionRequiredSelection'
+                    class='mt-3'
+                    label='Land Manager Permission Required'
+                    :options='yesNoOptions'
+                />
 
                 <label class='form-label mt-3'>Map Source</label>
                 <div class='row'>
@@ -381,34 +305,39 @@
                     label='If other, list'
                 />
             </div>
-        </div>
+        </TablerBorder>
 
         <!-- Weather -->
-        <div class='card mb-3'>
-            <div
-                class='card-header'
-                style='cursor: pointer;'
-                @click='weatherOpen = !weatherOpen'
-            >
-                <div class='card-title'>
-                    Weather
+        <TablerBorder
+            class='cloudtak-accent text-white mb-3'
+            :fill-height='false'
+            :shadow='false'
+            gap='sm'
+        >
+            <template #label>
+                <div
+                    class='d-flex align-items-center justify-content-between w-100'
+                    style='cursor: pointer;'
+                    @click='weatherOpen = !weatherOpen'
+                >
+                    <p class='text-uppercase text-white-50 small mb-0'>
+                        Weather
+                    </p>
+                    <div class='d-flex align-items-center gap-2'>
+                        <button
+                            type='button'
+                            class='btn btn-sm btn-primary'
+                            :disabled='!hasMapPoint || weatherLoading'
+                            @click.stop='fetchWeather'
+                        >
+                            {{ weatherLoading ? 'Fetching…' : 'Auto-fill from NWS' }}
+                        </button>
+                        <CollapseChevron :open='weatherOpen' />
+                    </div>
                 </div>
-                <div class='card-actions d-flex align-items-center gap-2'>
-                    <button
-                        type='button'
-                        class='btn btn-sm btn-primary'
-                        :disabled='!hasMapPoint || weatherLoading'
-                        @click.stop='fetchWeather'
-                    >
-                        {{ weatherLoading ? 'Fetching…' : 'Auto-fill from NWS' }}
-                    </button>
-                    <CollapseChevron :open='weatherOpen' />
-                </div>
-            </div>
-            <div
-                v-if='weatherOpen'
-                class='card-body'
-            >
+            </template>
+
+            <div v-if='weatherOpen'>
                 <p class='text-muted'>
                     Pick a location on the map, then auto-fill current conditions from the National
                     Weather Service. US coverage only; all fields can be edited.
@@ -419,22 +348,11 @@
                     :err='weatherError'
                 />
 
-                <label class='form-label'>Forecast Attached (DataSync)</label>
-                <select
-                    v-model='form.forecastAttached'
-                    class='form-select'
-                >
-                    <option value=''>
-                        Select…
-                    </option>
-                    <option
-                        v-for='opt in YES_NO'
-                        :key='opt'
-                        :value='opt'
-                    >
-                        {{ opt }}
-                    </option>
-                </select>
+                <TablerEnum
+                    v-model='forecastAttachedSelection'
+                    label='Forecast Attached (DataSync)'
+                    :options='yesNoOptions'
+                />
 
                 <TablerInput
                     v-model='form.weather.source'
@@ -498,15 +416,20 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </TablerBorder>
 
         <!-- Performance Check -->
-        <div class='card mb-3'>
-            <div class='card-header'>
-                <div class='card-title'>
-                    Performance Check
-                </div>
-                <div class='card-actions'>
+        <TablerBorder
+            class='cloudtak-accent text-white mb-3'
+            :fill-height='false'
+            :shadow='false'
+            gap='sm'
+        >
+            <template #label>
+                <div class='d-flex align-items-center justify-content-between w-100'>
+                    <p class='text-uppercase text-white-50 small mb-0'>
+                        Performance Check
+                    </p>
                     <span
                         class='badge'
                         :class='overallBadgeClass'
@@ -514,73 +437,78 @@
                         {{ overallBadgeLabel }}
                     </span>
                 </div>
-            </div>
-            <div class='card-body'>
-                <p
-                    v-if='evaluation.metrics.length === 0'
-                    class='text-muted mb-0'
-                >
-                    Select a platform with performance specs (from the uploaded config) to evaluate
-                    the current weather.
-                </p>
-                <table
-                    v-else
-                    class='table table-sm mb-0'
-                >
-                    <thead>
-                        <tr>
-                            <th>Metric</th>
-                            <th>Current</th>
-                            <th>Limit</th>
-                            <th>Result</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for='metric in evaluation.metrics'
-                            :key='metric.label'
-                        >
-                            <td>{{ metric.label }}</td>
-                            <td>{{ metric.value }}</td>
-                            <td>{{ metric.limit }}</td>
-                            <td>
-                                <span
-                                    class='badge'
-                                    :class='metricBadgeClass(metric.status)'
-                                >
-                                    {{ metricBadgeLabel(metric.status) }}
-                                </span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                <div
-                    v-if='evaluation.metrics.length > 0 && !evaluation.overallPass'
-                    class='alert alert-warning mt-3 mb-0'
-                >
-                    Current weather is outside the selected platform's specifications. Review before
-                    flight. You can still generate a report.
-                </div>
-            </div>
-        </div>
+            </template>
+
+            <p
+                v-if='evaluation.metrics.length === 0'
+                class='text-muted mb-0'
+            >
+                Select a platform with performance specs (from the uploaded config) to evaluate
+                the current weather.
+            </p>
+            <table
+                v-else
+                class='table table-sm mb-0'
+            >
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Current</th>
+                        <th>Limit</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr
+                        v-for='metric in evaluation.metrics'
+                        :key='metric.label'
+                    >
+                        <td>{{ metric.label }}</td>
+                        <td>{{ metric.value }}</td>
+                        <td>{{ metric.limit }}</td>
+                        <td>
+                            <span
+                                class='badge'
+                                :class='metricBadgeClass(metric.status)'
+                            >
+                                {{ metricBadgeLabel(metric.status) }}
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <TablerInlineAlert
+                v-if='evaluation.metrics.length > 0 && !evaluation.overallPass'
+                class='mt-3'
+                severity='warning'
+                title='Outside Specifications'
+                :description='PERFORMANCE_WARNING_DESCRIPTION'
+            />
+        </TablerBorder>
 
         <!-- Operational Hazards -->
-        <div class='card mb-3'>
-            <div
-                class='card-header'
-                style='cursor: pointer;'
-                @click='hazardsOpen = !hazardsOpen'
-            >
-                <div class='card-title'>
-                    Operational Hazards
-                </div>
-                <div class='card-actions'>
+        <TablerBorder
+            class='cloudtak-accent text-white mb-3'
+            :fill-height='false'
+            :shadow='false'
+            gap='sm'
+        >
+            <template #label>
+                <div
+                    class='d-flex align-items-center justify-content-between w-100'
+                    style='cursor: pointer;'
+                    @click='hazardsOpen = !hazardsOpen'
+                >
+                    <p class='text-uppercase text-white-50 small mb-0'>
+                        Operational Hazards
+                    </p>
                     <CollapseChevron :open='hazardsOpen' />
                 </div>
-            </div>
+            </template>
+
             <div
                 v-if='hazardsOpen'
-                class='card-body d-flex flex-column gap-3'
+                class='d-flex flex-column gap-3'
             >
                 <div class='operational-hazard-section border rounded p-3'>
                     <div class='operational-hazard-section-title mb-2'>
@@ -740,26 +668,29 @@
                     />
                 </div>
             </div>
-        </div>
+        </TablerBorder>
 
         <!-- Logistics -->
-        <div class='card mb-3'>
-            <div
-                class='card-header'
-                style='cursor: pointer;'
-                @click='logisticsOpen = !logisticsOpen'
-            >
-                <div class='card-title'>
-                    Logistics
-                </div>
-                <div class='card-actions'>
+        <TablerBorder
+            class='cloudtak-accent text-white mb-3'
+            :fill-height='false'
+            :shadow='false'
+            gap='sm'
+        >
+            <template #label>
+                <div
+                    class='d-flex align-items-center justify-content-between w-100'
+                    style='cursor: pointer;'
+                    @click='logisticsOpen = !logisticsOpen'
+                >
+                    <p class='text-uppercase text-white-50 small mb-0'>
+                        Logistics
+                    </p>
                     <CollapseChevron :open='logisticsOpen' />
                 </div>
-            </div>
-            <div
-                v-if='logisticsOpen'
-                class='card-body'
-            >
+            </template>
+
+            <div v-if='logisticsOpen'>
                 <label class='form-label'>Remote Pilot(s)</label>
                 <div
                     v-if='config.remotePilots.length === 0'
@@ -805,26 +736,29 @@
                     max-hint='Maximum of 10 additional crewmembers.'
                 />
             </div>
-        </div>
+        </TablerBorder>
 
         <!-- Generate -->
-        <div class='card mb-3'>
-            <div
-                class='card-header'
-                style='cursor: pointer;'
-                @click='generateOpen = !generateOpen'
-            >
-                <div class='card-title'>
-                    Generate Report
-                </div>
-                <div class='card-actions'>
+        <TablerBorder
+            class='cloudtak-accent text-white mb-3'
+            :fill-height='false'
+            :shadow='false'
+            gap='sm'
+        >
+            <template #label>
+                <div
+                    class='d-flex align-items-center justify-content-between w-100'
+                    style='cursor: pointer;'
+                    @click='generateOpen = !generateOpen'
+                >
+                    <p class='text-uppercase text-white-50 small mb-0'>
+                        Generate Report
+                    </p>
                     <CollapseChevron :open='generateOpen' />
                 </div>
-            </div>
-            <div
-                v-if='generateOpen'
-                class='card-body'
-            >
+            </template>
+
+            <div v-if='generateOpen'>
                 <TablerInput
                     v-model='reportTitle'
                     label='Report Title'
@@ -844,39 +778,42 @@
                     :err='generateError'
                 />
             </div>
-        </div>
+        </TablerBorder>
 
         <!-- Reports list -->
-        <div class='card'>
-            <div
-                class='card-header'
-                style='cursor: pointer;'
-                @click='reportsOpen = !reportsOpen'
-            >
-                <div class='card-title'>
-                    Reports
-                </div>
-                <div class='card-actions'>
+        <TablerBorder
+            class='cloudtak-accent text-white mb-3'
+            :fill-height='false'
+            :shadow='false'
+            gap='sm'
+        >
+            <template #label>
+                <div
+                    class='d-flex align-items-center justify-content-between w-100'
+                    style='cursor: pointer;'
+                    @click='reportsOpen = !reportsOpen'
+                >
+                    <p class='text-uppercase text-white-50 small mb-0'>
+                        Reports
+                    </p>
                     <CollapseChevron :open='reportsOpen' />
                 </div>
-            </div>
-            <div
-                v-if='reportsOpen'
-                class='card-body'
-            >
+            </template>
+
+            <div v-if='reportsOpen'>
                 <p
                     v-if='reports.length === 0'
                     class='text-muted mb-0'
                 >
                     No reports yet. Fill in the form and generate one above.
                 </p>
-                <div
+                <TablerInlineAlert
                     v-if='actionNotice'
-                    class='alert mb-3'
-                    :class='actionError ? "alert-danger" : "alert-success"'
-                >
-                    {{ actionNotice }}
-                </div>
+                    class='mb-3'
+                    :severity='actionError ? "danger" : "success"'
+                    :title='actionError ? "Action Failed" : "Action Complete"'
+                    :description='actionNotice'
+                />
                 <table
                     v-if='reports.length > 0'
                     class='table'
@@ -934,26 +871,29 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+        </TablerBorder>
 
         <!-- Configuration upload (accordion) -->
-        <div class='card mt-3'>
-            <div
-                class='card-header'
-                style='cursor: pointer;'
-                @click='configOpen = !configOpen'
-            >
-                <div class='card-title'>
-                    Configuration
-                </div>
-                <div class='card-actions'>
+        <TablerBorder
+            class='cloudtak-accent text-white'
+            :fill-height='false'
+            :shadow='false'
+            gap='sm'
+        >
+            <template #label>
+                <div
+                    class='d-flex align-items-center justify-content-between w-100'
+                    style='cursor: pointer;'
+                    @click='configOpen = !configOpen'
+                >
+                    <p class='text-uppercase text-white-50 small mb-0'>
+                        Configuration
+                    </p>
                     <CollapseChevron :open='configOpen' />
                 </div>
-            </div>
-            <div
-                v-if='configOpen'
-                class='card-body'
-            >
+            </template>
+
+            <div v-if='configOpen'>
                 <p class='text-muted'>
                     Upload a JSON file to populate the Land Manager / Owner, Platform, and Remote
                     Pilot lists, and to supply per-platform performance specifications. Saved per
@@ -971,21 +911,27 @@
                     (with optional <code>specs</code>), <code>remotePilots</code>.
                 </div>
 
-                <div
+                <TablerInlineAlert
                     v-if='configNotice'
-                    class='alert mt-3'
-                    :class='configError ? "alert-danger" : "alert-success"'
-                >
-                    {{ configNotice }}
-                </div>
+                    class='mt-3'
+                    :severity='configError ? "danger" : "success"'
+                    :title='configError ? "Config Error" : "Config Loaded"'
+                    :description='configNotice'
+                />
             </div>
-        </div>
+        </TablerBorder>
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
-import { TablerInput, TablerAlert } from '@tak-ps/vue-tabler';
+import {
+    TablerBorder,
+    TablerInput,
+    TablerEnum,
+    TablerAlert,
+    TablerInlineAlert,
+} from '@tak-ps/vue-tabler';
 import CollapseChevron from './CollapseChevron.vue';
 import LabelInfoPopup from './LabelInfoPopup.vue';
 import MitigationsList from './MitigationsList.vue';
@@ -1002,6 +948,7 @@ import {
     type PerformanceStatus,
     type PreflightConfig,
     type PreflightFormState,
+    type PreflightPlatform,
     type PreflightReport,
     type RemotePilot,
 } from '../types';
@@ -1092,6 +1039,9 @@ const DATA_COLLECTION = [
     'Other',
 ];
 
+const PERFORMANCE_WARNING_DESCRIPTION = 'Current weather is outside the selected platform\'s '
+    + 'specifications. Review before flight. You can still generate a report.';
+
 function createForm(): PreflightFormState {
     return {
         dateTime: '',
@@ -1163,6 +1113,72 @@ const actionError = ref(false);
 function pilotLabel(pilot: RemotePilot): string {
     return pilot.name ? `${pilot.id} — ${pilot.name}` : pilot.id;
 }
+
+// ── TablerEnum label mappings ────────────────────────────────────────────
+// TablerEnum only supports string[] options and has no built-in "unselected"
+// placeholder, so a shared sentinel maps '' (unselected form value) <-> the
+// placeholder label shown in the dropdown.
+
+const SELECT_PLACEHOLDER = 'Select…';
+const yesNoOptions = [SELECT_PLACEHOLDER, ...YES_NO];
+
+type SelectableFormField = 'airspaceClass' | 'laancRequired' | 'flightCategory' | 'missionType'
+    | 'flightRule' | 'landManager' | 'landManagerPermissionRequired' | 'forecastAttached';
+
+function makeSelectEnum(field: SelectableFormField) {
+    return computed<string>({
+        get: () => form[field] || SELECT_PLACEHOLDER,
+        set: (label: string) => {
+            form[field] = label === SELECT_PLACEHOLDER ? '' : label;
+        },
+    });
+}
+
+const airspaceClassOptions = [SELECT_PLACEHOLDER, ...AIRSPACE_CLASSES];
+const airspaceClassSelection = makeSelectEnum('airspaceClass');
+
+const laancRequiredSelection = makeSelectEnum('laancRequired');
+
+const flightCategoryOptions = [SELECT_PLACEHOLDER, ...FLIGHT_CATEGORIES];
+const flightCategorySelection = makeSelectEnum('flightCategory');
+
+const missionTypeOptions = [SELECT_PLACEHOLDER, ...MISSION_TYPES];
+const missionTypeSelection = makeSelectEnum('missionType');
+
+const flightRuleOptions = [SELECT_PLACEHOLDER, ...FLIGHT_RULES];
+const flightRuleSelection = makeSelectEnum('flightRule');
+
+const landManagerOptions = computed(() => [SELECT_PLACEHOLDER, ...config.landManagers]);
+const landManagerSelection = makeSelectEnum('landManager');
+
+const landManagerPermissionRequiredSelection = makeSelectEnum('landManagerPermissionRequired');
+
+const forecastAttachedSelection = makeSelectEnum('forecastAttached');
+
+function platformOptionLabel(platform: PreflightPlatform): string {
+    return `${platform.name}${platform.specs ? ' (specs available)' : ''}`;
+}
+
+const platformOptions = computed(() => [
+    SELECT_PLACEHOLDER,
+    ...config.platforms.map(platformOptionLabel),
+]);
+
+const platformSelection = computed<string>({
+    get: () => {
+        if (!form.platform) return SELECT_PLACEHOLDER;
+        const match = config.platforms.find((platform) => platform.name === form.platform);
+        return match ? platformOptionLabel(match) : form.platform;
+    },
+    set: (label: string) => {
+        if (label === SELECT_PLACEHOLDER) {
+            form.platform = '';
+            return;
+        }
+        const match = config.platforms.find((platform) => platformOptionLabel(platform) === label);
+        form.platform = match ? match.name : label;
+    },
+});
 
 const pickedPoint = ref<{ lat: number; lon: number } | null>(null);
 const pickingLocation = ref(false);
