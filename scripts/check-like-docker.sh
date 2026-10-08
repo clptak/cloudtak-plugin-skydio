@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Simulate CloudTAK Docker web build gate for this plugin:
-#   npm run lint && npm run check && npm run build  (from api/web, no plugin node_modules)
+#   npm run lint && npm run check && npm run build  (from app/, no plugin node_modules)
 set -euo pipefail
 
-WEB="${1:-$HOME/CloudTAK/api/web}"
+WEB="${1:-$HOME/CloudTAK/app}"
 PLUGIN_SLUG="${PLUGIN_SLUG:-skydio}"
 PLUGIN_DIR="plugins/${PLUGIN_SLUG}"
 PLUGIN_NM="$WEB/$PLUGIN_DIR/node_modules"
@@ -34,7 +34,7 @@ npm run check 2>&1 | tee /tmp/cloudtak-check.log
 set -e
 if grep -q "${PLUGIN_DIR}/" /tmp/cloudtak-check.log; then
   echo >&2
-  echo "${PLUGIN_SLUG} vue-tsc errors — fix types or ensure deps come from api/web package.json:" >&2
+  echo "${PLUGIN_SLUG} vue-tsc errors — fix types or ensure deps come from the CloudTAK app package.json:" >&2
   grep "${PLUGIN_DIR}/" /tmp/cloudtak-check.log >&2
   exit 1
 fi

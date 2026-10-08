@@ -3,6 +3,7 @@ cloudtak_plugin_docs/
 plugin_context/
 .env
 .env.*
+config.local.ts
 *backup*
 node_modules
 .DS_Store.cursor/

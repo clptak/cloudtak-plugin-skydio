@@ -7,7 +7,7 @@
 import { markRaw } from 'vue';
 import type { Component } from 'vue';
 import type { PluginAPI } from '@tak-ps/cloudtak';
-// Host module under api/web/plugins (Vite remaps); absent in standalone checkout.
+// Host module under app/plugins (Vite remaps symlinks onto app/src); absent in a standalone checkout.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- dual local/host typecheck
 // @ts-ignore
 import { useFloatStore } from '../../../src/stores/float.ts';

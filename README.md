@@ -4,19 +4,29 @@ Skydio Plugin for CloudTAK to interface with Skydio's API (https://api.skydio.co
 
 ## Installation
 
-Copy or symlink this repository into CloudTAK's `api/web/plugins/skydio/` before building the web UI. CloudTAK bundles plugins at build time via `import.meta.glob`.
+Copy or symlink this repository into CloudTAK's `app/plugins/skydio/` before building the web UI (CloudTAK 13.102+). CloudTAK bundles plugins at build time via `import.meta.glob`.
 
 No CloudTAK or Dockerfile changes are required. Pre-flight PDF generation depends on
 [jsPDF](https://github.com/parallax/jsPDF), which is vendored under `vendor/` so the
 plugin is self-contained through CloudTAK's `lint` → `check` → `build` web pipeline.
 See [`vendor/README.md`](vendor/README.md) for why and how to update it.
 
+## Deployment defaults
+
+Shared Authentik and webhook settings can be compiled into the plugin so each person only enters the Skydio API key issued to them.
+
+1. Copy [`config.local.example.ts`](config.local.example.ts) to `config.local.ts`. That file is gitignored.
+2. Fill in the Authentik token URL, OAuth client id and secret, SSE URL, and webhook URL. Leave the API key out.
+3. Restart `npm run serve` in `CloudTAK/app`, or rebuild the web UI. Vite reads `config.local.ts` at build time; the browser never reads a `.env` file.
+
+A webhook field already saved in this browser wins over `config.local.ts` until that field is cleared and saved again. Values from `config.local.ts` are baked into the JavaScript bundle, so anyone who can load CloudTAK can read them, including the OAuth client secret.
+
 ## Prerequisites
 
 1. **Plugin Proxy** enabled in CloudTAK Admin → Plugin Proxy.
 2. Whitelist the hosts you configure in Settings (Skydio API, Authentik token URL, webhook SSE URL, and webhook POST URL).
-3. Skydio Cloud API token entered in the plugin Settings tab.
-4. Authentik **webhook-sse** OAuth2 client ID + secret, Authentik token URL, SSE URL, and webhook URL entered in Settings → Webhook SSE.
+3. Skydio Cloud API token entered in the plugin Settings tab (the only per-user secret).
+4. Authentik **webhook-sse** OAuth2 client ID + secret, Authentik token URL, SSE URL, and webhook URL. Put these in gitignored [`config.local.ts`](#deployment-defaults) so people do not have to type them, or enter them in Settings → Webhook SSE.
    SSE auth failures that look like bad settings are often relay JWKS — see [docs/proxy-and-auth-troubleshooting.md](docs/proxy-and-auth-troubleshooting.md#webhook-sse-401--jwks).
 5. Skydio webhook registered to your configured webhook URL (Webhooks tab).
 6. **CORS** on webhook server `/events/*` for your CloudTAK origin (local dev: `http://localhost:8080`). Deploy `WebMvcConfig.kt` in your webhook server and reload your reverse proxy.
@@ -26,7 +36,7 @@ See [`vendor/README.md`](vendor/README.md) for why and how to update it.
 SSE cannot use the Plugin Proxy (long-lived stream). From local CloudTAK dev, either:
 
 1. **Deploy server CORS** (recommended): rebuild `webhook-server` with `WebMvcConfig.kt` and reload Caddy (see tak-stack `Caddyfile` `/events/*` block), or
-2. **Vite dev proxy** (no server change): add to CloudTAK `api/web/vite.config.ts`:
+2. **Vite dev proxy** (no server change): add to CloudTAK `app/vite.config.ts`:
 
 ```typescript
 server: {

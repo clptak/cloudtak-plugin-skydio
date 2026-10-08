@@ -87,6 +87,13 @@
                 Connect to the webhook server SSE stream for real-time Skydio alerts.
                 Use credentials from the Authentik <code>webhook-sse</code> OAuth2 application.
             </p>
+            <p
+                v-if='deploymentConfigured'
+                class='text-muted'
+            >
+                Authentik and webhook URLs for this CloudTAK are already filled in.
+                Enter your API key above. Edit a webhook field only to override the deployment value.
+            </p>
 
             <TablerInput
                 v-model='local.authentikTokenUrl'
@@ -209,6 +216,7 @@ import {
     TablerInlineAlert,
 } from '@tak-ps/vue-tabler';
 import { fetchClientCredentialsToken } from '../api/authentik';
+import { hasDeploymentDefaults } from '../storage/deploymentDefaults';
 import { mergeSkydioSettings } from '../storage/settings';
 import type { SkydioSettings, SkydioVehicle } from '../types';
 import CollapseChevron from './CollapseChevron.vue';
@@ -228,6 +236,7 @@ const emit = defineEmits<{
     refreshVehicles: [];
 }>();
 
+const deploymentConfigured = hasDeploymentDefaults();
 const local = reactive<SkydioSettings>({ ...props.settings });
 const saved = ref(false);
 const testing = ref(false);
