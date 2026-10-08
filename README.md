@@ -13,7 +13,7 @@ See [`vendor/README.md`](vendor/README.md) for why and how to update it.
 
 ## Deployment defaults
 
-Shared Authentik and webhook settings can be compiled into the plugin so each person only enters the Skydio API key issued to them.
+Shared Authentik and webhook settings can be compiled into the plugin so each person only enters the Skydio API key issued to them. The same pattern is written up for other plugins in [docs/config-local.md](docs/config-local.md).
 
 1. Copy [`config.local.example.ts`](config.local.example.ts) to `config.local.ts`. That file is gitignored.
 2. Fill in the Authentik token URL, OAuth client id and secret, SSE URL, and webhook URL. Leave the API key out.
