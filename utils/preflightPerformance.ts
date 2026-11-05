@@ -146,6 +146,14 @@ export function evaluatePerformance(
             (l) => `\u2264 ${l}\u00B0F`,
         ),
         metric(
+            'Visibility',
+            weather.visibilityMiles,
+            spec.minVisibilityMiles,
+            (v, l) => v >= l,
+            (v) => `${v} mi`,
+            (l) => `\u2265 ${l} mi`,
+        ),
+        metric(
             'KP index',
             weather.kpIndex.trim() === '' ? null : Number(weather.kpIndex),
             spec.maxKpIndex,
