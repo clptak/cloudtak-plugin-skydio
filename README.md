@@ -24,6 +24,12 @@ A webhook field already saved in this browser wins over `config.local.ts` until 
 
 `git pull` and CloudTAK core updates leave `config.local.ts` in place and do not merge new example rows into it, but `git clean -fdx` deletes it, and a fresh clone does not have it. Copy the file onto any machine that builds the web UI. CloudTAK's `.dockerignore` excludes `app/plugins/*`, so check that your Docker build actually receives the plugin directory.
 
+### PreFlight lists and performance specs
+
+To give everyone the same Land Manager, Platform, and Remote Pilot lists and the platform specs the Performance Check uses, copy [`preflight-config.local.example.json`](preflight-config.local.example.json) to `preflight-config.local.json` at the plugin root, fill it in, then restart or rebuild as above. That file is gitignored, so it has the same update and Docker caveats as `config.local.ts`.
+
+Without this file or an upload, the platform list has no specs and the Performance Check shows NOT EVALUATED. A config someone uploaded in the PreFlight tab still wins in their browser. Everything in this file is baked into the JavaScript bundle, so anyone who can load CloudTAK can read it, including pilot names and ids.
+
 ## Prerequisites
 
 1. **Plugin Proxy** enabled in CloudTAK Admin → Plugin Proxy.

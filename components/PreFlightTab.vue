@@ -443,8 +443,9 @@
                 v-if='evaluation.metrics.length === 0'
                 class='text-muted mb-0'
             >
-                Select a platform with performance specs (from the uploaded config) to evaluate
-                the current weather.
+                Select a platform with performance specs to evaluate the current weather. Platforms
+                with specs are marked in the list. If none are, ask your administrator to add
+                <code>preflight-config.local.json</code> to the build, or upload a config below.
             </p>
             <table
                 v-else
@@ -895,9 +896,9 @@
 
             <div v-if='configOpen'>
                 <p class='text-muted'>
-                    Upload a JSON file to populate the Land Manager / Owner, Platform, and Remote
-                    Pilot lists, and to supply per-platform performance specifications. Saved per
-                    CloudTAK user in this browser.
+                    Optional. Upload a JSON file to replace this CloudTAK's Land Manager / Owner,
+                    Platform, and Remote Pilot lists and per-platform performance specifications.
+                    Saved per CloudTAK user in this browser.
                 </p>
                 <input
                     ref='configInput'

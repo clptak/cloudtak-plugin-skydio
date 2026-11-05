@@ -131,13 +131,34 @@ export function parsePreflightConfig(text: string): PreflightConfig {
     return normalizePreflightConfig(parsed);
 }
 
+/**
+ * Lists and specs compiled in from the gitignored preflight-config.local.json. A missing file
+ * becomes an empty module map, so clones without it still build and use the hardcoded defaults.
+ */
+function deploymentPreflightConfig(): PreflightConfig {
+    const modules = import.meta.glob<{ default: unknown }>('../preflight-config.local.json', {
+        eager: true,
+    });
+
+    for (const mod of Object.values(modules)) {
+        try {
+            return normalizePreflightConfig(mod.default);
+        } catch (err) {
+            console.error('Ignoring preflight-config.local.json:', err);
+        }
+    }
+
+    return { ...DEFAULT_PREFLIGHT_CONFIG };
+}
+
+/** Load order: this user's upload in this browser, then the build's file, then hardcoded defaults. */
 export function loadPreflightConfig(): PreflightConfig {
     try {
         const raw = localStorage.getItem(configStorageKey());
-        if (!raw) return { ...DEFAULT_PREFLIGHT_CONFIG };
+        if (!raw) return deploymentPreflightConfig();
         return normalizePreflightConfig(JSON.parse(raw));
     } catch {
-        return { ...DEFAULT_PREFLIGHT_CONFIG };
+        return deploymentPreflightConfig();
     }
 }
 

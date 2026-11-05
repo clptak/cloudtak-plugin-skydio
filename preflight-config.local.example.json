@@ -1,0 +1,30 @@
+{
+    "landManagers": [
+        "United States Forest Service",
+        "National Park Service",
+        "Bureau of Land Management",
+        "State Land",
+        "County",
+        "Native American Reservation",
+        "Private",
+        "Other"
+    ],
+    "platforms": [
+        {
+            "name": "Example Drone",
+            "specs": {
+                "maxWindMph": 0,
+                "minTempF": 0,
+                "maxTempF": 0,
+                "minVisibilityMiles": 0,
+                "maxKpIndex": 0
+            }
+        }
+    ],
+    "remotePilots": [
+        {
+            "id": "EXAMPLE-PILOT-ID",
+            "name": "Example Pilot"
+        }
+    ]
+}

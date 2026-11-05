@@ -4,6 +4,7 @@ plugin_context/
 .env
 .env.*
 config.local.ts
+preflight-config.local.json
 *backup*
 node_modules
 .DS_Store.cursor/
