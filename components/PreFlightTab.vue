@@ -84,7 +84,7 @@
                     >
                         <div class='text-muted small mb-1'>
                             Overlay features under the point (use the stable id to fill
-                            <code>lib/overlay-field-map.ts</code>):
+                            <code>overlayFieldMap</code> in <code>config.local.ts</code>):
                         </div>
                         <div
                             v-for='(hit, idx) in inspectResults'
@@ -980,7 +980,8 @@ import {
     OVERLAY_FIELD_GROUPS,
     mappingsForFields,
     overlayNamesForMappings,
-    mappingsMissingOverlayName,
+    mappingsWithOverlayName,
+    fieldsMissingOverlayName,
     type PreflightAutofillField,
 } from '../lib/overlay-field-map.ts';
 import {
@@ -1268,7 +1269,7 @@ async function pickLocationOnMap(): Promise<void> {
 
 // ── Overlay auto-fill ──────────────────────────────────────────────────────
 // Read mapped attributes from CloudTAK overlays at the selected point and write
-// them into the form. See lib/overlay-field-map.ts for the (Paul-authored) mapping.
+// them into the form. The mapping is overlayFieldMap in the gitignored config.local.ts.
 
 const NUMBER_FIELDS = new Set<PreflightAutofillField>(['maxAltitudeAglFt', 'latitude', 'longitude']);
 
@@ -1315,23 +1316,18 @@ async function detectOverlays(opts: { fields?: PreflightAutofillField[] } = {}):
     const point = mapPoint.value;
     if (!point) return;
 
-    const mapping = opts.fields?.length
+    const requested = opts.fields?.length
         ? mappingsForFields(opts.fields)
         : OVERLAY_FIELD_MAP;
 
+    const mapping = mappingsWithOverlayName(requested);
     if (!mapping.length) {
-        detectError.value = false;
-        detectNotice.value = 'No overlay → field mappings configured for the selected fields.';
-        return;
-    }
-
-    const unnamed = mappingsMissingOverlayName(mapping);
-    if (unnamed.length) {
         detectError.value = true;
-        detectNotice.value = 'Set real overlay names in lib/overlay-field-map.ts (OVERLAY_NAMES) '
-            + 'before running Detect.';
+        detectNotice.value = 'No overlays are configured for these fields. Set overlayFieldMap in the '
+            + 'Skydio plugin\'s config.local.ts, then rebuild CloudTAK.';
         return;
     }
+    const skippedFields = fieldsMissingOverlayName(requested);
 
     detecting.value = true;
     detectNotice.value = null;
@@ -1377,6 +1373,12 @@ async function detectOverlays(opts: { fields?: PreflightAutofillField[] } = {}):
             parts.push('No values detected — missing overlays could not be loaded.');
         } else {
             parts.push('No mapped overlay attributes found at this point — use Inspect to verify ids/keys.');
+        }
+        if (skippedFields.length) {
+            // A skipped overlay can hide a restriction, so never present this result as complete.
+            detectError.value = true;
+            parts.push('Not checked against every overlay, because some names are not set in '
+                + `config.local.ts. Verify manually: ${skippedFields.join(', ')}.`);
         }
         detectNotice.value = parts.join(' ');
     } catch (err) {

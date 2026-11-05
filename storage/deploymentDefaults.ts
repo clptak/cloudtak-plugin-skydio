@@ -1,10 +1,12 @@
 import type { SkydioSettings } from '../types';
+import type { OverlayFieldMapping } from '../lib/overlay-field-map';
 
 /** Shared settings compiled in from gitignored config.local.ts. Never includes an API key. */
 export type DeploymentSettings = Partial<Omit<SkydioSettings, 'apiKey'>>;
 
 interface DeploymentModule {
     deploymentDefaults?: DeploymentSettings;
+    overlayFieldMap?: OverlayFieldMapping[];
 }
 
 /**
@@ -26,6 +28,19 @@ export function deploymentDefaults(): DeploymentSettings {
     }
 
     return {};
+}
+
+/** This deployment's overlay → PreFlight field rows. Empty when none are configured. */
+export function deploymentOverlayFieldMap(): OverlayFieldMapping[] {
+    const modules = import.meta.glob<DeploymentModule>('../config.local.ts', {
+        eager: true,
+    });
+
+    for (const mod of Object.values(modules)) {
+        if (Array.isArray(mod?.overlayFieldMap)) return mod.overlayFieldMap;
+    }
+
+    return [];
 }
 
 export function hasDeploymentDefaults(): boolean {
