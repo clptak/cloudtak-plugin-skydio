@@ -17,7 +17,7 @@ Shared Authentik and webhook settings can be compiled into the plugin so each pe
 
 1. Copy [`config.local.example.ts`](config.local.example.ts) to `config.local.ts`. That file is gitignored.
 2. Fill in the Authentik token URL, OAuth client id and secret, SSE URL, and webhook URL. Leave the API key out.
-3. Set up the PreFlight Detect buttons. In `OVERLAY_NAMES`, enter the exact labels from this deployment's CloudTAK Overlays menu. Leave a name blank if this deployment does not have that overlay: Detect skips it and lists the fields to verify manually. The `overlayFieldMap` rows in the example are for northern Arizona, so check their layer ids and attributes with **Inspect overlays at point**, and edit the value maps for your local agencies.
+3. Set up the PreFlight Detect buttons. The `overlayFieldMap` rows in the example are for northern Arizona, so check their layer ids and attributes with **Inspect overlays at point**, edit the value maps for your local agencies, and delete rows for overlays you do not use. Detect finds each overlay from its layer id, so overlay names do not matter. If an overlay is not in someone's Overlays menu, Detect lists its layers and the fields to verify manually.
 4. Restart `npm run serve` in `CloudTAK/app`, or rebuild the web UI. Vite reads `config.local.ts` at build time; the browser never reads a `.env` file.
 
 A webhook field already saved in this browser wins over `config.local.ts` until that field is cleared and saved again. Values from `config.local.ts` are baked into the JavaScript bundle, so anyone who can load CloudTAK can read them, including the OAuth client secret.

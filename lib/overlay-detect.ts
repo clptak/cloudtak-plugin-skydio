@@ -4,9 +4,8 @@
 // map.queryRenderedFeatures(box), then read overlay features rendered there.
 //
 // Two hard-won rules baked in here (see docs/PATTERN-overlay-attribute-autofill.md):
-//   1. Do NOT depend on the map store's `overlays` list — inside a plugin it can come back empty
-//      even while the overlay layers are clearly rendered. Overlay layers are identified purely by
-//      their id shape instead: anything matching `^\d+-` is an overlay layer (`${overlay.id}-…`).
+//   1. Read rendered features without depending on any overlay list. Overlay layers are identified
+//      purely by their id shape: anything matching `^\d+-` is an overlay layer (`${overlay.id}-…`).
 //   2. The leading number in a layer id (`${overlay.id}-`) is reassigned on every restart and can
 //      differ between users, so `1202-136-poly` may become `1530-136-poly`. We therefore match on
 //      the STABLE suffix (strip a single leading `\d+-`), never the full runtime id.
@@ -70,7 +69,7 @@ export interface DetectDebug {
     totalFeaturesAtPoint: number;
     /** layer id + source for every rendered feature under the point (deduped, capped). */
     sampleLayers: Array<{ layerId: string; source: string }>;
-    /** Whatever the map store reports (often empty in a plugin — informational only). */
+    /** Loaded overlays that are switched on (informational only). */
     visibleOverlays: Array<{ id: number; name: string; type?: string }>;
 }
 
@@ -91,22 +90,17 @@ export function layerSuffix(id: string): string {
 
 /**
  * Does a runtime layer id refer to the same overlay layer as a configured id?
- * Tolerant of the volatile leading `${overlay.id}-` on either side, so the mapping keeps working
- * after the id is reassigned — and whether you stored the full id ("1202-136-poly") or just the
- * stable suffix ("136-poly").
+ * Compares against the stable suffix, so the mapping keeps working after the leading
+ * `${overlay.id}-` is reassigned. Never strip the configured id too: "394-poly" would become
+ * "poly" and match every overlay with a default `${overlay.id}-poly` layer.
  */
 export function layerMatches(runtimeLayerId: string, configLayerId: string): boolean {
-    if (runtimeLayerId === configLayerId) return true;
-    const runtimeSuffix = layerSuffix(runtimeLayerId);
-    if (runtimeSuffix === configLayerId) return true; // config stored the stable suffix
-    if (runtimeSuffix === layerSuffix(configLayerId)) return true; // config stored a full id
-    return false;
+    return runtimeLayerId === configLayerId || layerSuffix(runtimeLayerId) === configLayerId;
 }
 
 /**
  * Dump every rendered OVERLAY feature under the point — used to author the mapping.
- * Identifies overlay layers by the `^\d+-` id shape, so it works even when the store's
- * `overlays` list is empty.
+ * Identifies overlay layers by the `^\d+-` id shape, without needing an overlay list.
  */
 export function inspectAtPoint(map: MapLike, lonLat: [number, number]): InspectResult[] {
     const feats = map.queryRenderedFeatures(boxAround(map, lonLat));

@@ -22,51 +22,35 @@ export const deploymentDefaults: DeploymentSettings = {
 };
 
 /**
- * Exact labels from this deployment's CloudTAK Overlays menu, used by the
- * PreFlight Detect buttons. Leave a name blank if this deployment does not have
- * that overlay: Detect skips its rows and says which fields to verify manually.
- */
-const OVERLAY_NAMES = {
-    /** FAA UAS Facility Map: max altitude and LAANC */
-    uasfm: '',
-    /** FAA Special Use Airspace */
-    faaSpecialUse: '',
-    /** FAA Prohibited / Restricted areas */
-    faaProhibited: '',
-    /** Grand Canyon National Park SFRA */
-    gcnpSfra: '',
-    /** Wilderness areas */
-    wilderness: '',
-    /** Land owner / managing agency */
-    landowner: '',
-    /** FAA Class Airspace */
-    airspaceClass: '',
-};
-
-/**
- * Which overlay attribute fills which PreFlight field. These rows are a working
- * example for northern Arizona. Layer ids depend on each overlay's style, and the
- * value maps list local agencies, so check both against this deployment with
- * "Inspect overlays at point". Delete any rows that do not apply.
+ * Which overlay attribute fills which PreFlight field. Detect finds each overlay
+ * from its layer id, so overlay names and renames do not matter, but the overlay
+ * must be in the person's Overlays menu.
+ *
+ * These rows are a working example for northern Arizona. They expect overlays for
+ * the FAA UAS Facility Map (UASFM*), FAA Special Use Airspace (394-poly), FAA
+ * Prohibited / Restricted areas (400-poly), the Grand Canyon SFRA
+ * (gcnp-sectors-fill), Wilderness (wilderness-poly), Land Owner / Managing Agency
+ * (landowner-poly), and FAA Class Airspace (E4-poly, D-poly).
+ *
+ * Layer ids depend on each overlay's style, and the value maps list local agencies,
+ * so check both against this deployment with "Inspect overlays at point". Delete
+ * any rows that do not apply.
  */
 export const overlayFieldMap: OverlayFieldMapping[] = [
     {
         formField: 'maxAltitudeAglFt',
-        overlayName: OVERLAY_NAMES.uasfm,
         overlayLayerId: 'UASFM100-poly',
         attribute: 'CEILING',
         note: 'Maximum Permitted Altitude (AGL) — written as a number',
     },
     {
         formField: 'maxAltitudeAglFt',
-        overlayName: OVERLAY_NAMES.uasfm,
         overlayLayerId: 'UASFM50-poly',
         attribute: 'CEILING',
         note: 'Maximum Permitted Altitude (AGL) — written as a number',
     },
     {
         formField: 'maxAltitudeAglFt',
-        overlayName: OVERLAY_NAMES.uasfm,
         overlayLayerId: 'UASFM0-poly',
         attribute: 'CEILING',
         note: 'Maximum Permitted Altitude (AGL) — written as a number',
@@ -76,28 +60,24 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'maxAltitudeAglFt',
-        overlayName: OVERLAY_NAMES.uasfm,
         overlayLayerId: 'UASFM200-poly',
         attribute: 'CEILING',
         note: 'Maximum Permitted Altitude (AGL) — written as a number',
     },
     {
         formField: 'maxAltitudeAglFt',
-        overlayName: OVERLAY_NAMES.uasfm,
         overlayLayerId: 'UASFM300-poly',
         attribute: 'CEILING',
         note: 'Maximum Permitted Altitude (AGL) — written as a number',
     },
     {
         formField: 'maxAltitudeAglFt',
-        overlayName: OVERLAY_NAMES.uasfm,
         overlayLayerId: 'UASFM400-poly',
         attribute: 'CEILING',
         note: 'Maximum Permitted Altitude (AGL) — written as a number',
     },
     {
         formField: 'laancRequired',
-        overlayName: OVERLAY_NAMES.uasfm,
         overlayLayerId: 'UASFM100-poly',
         attribute: 'LAANC_REQUIRED',
         note: 'LAANC Required',
@@ -107,7 +87,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'laancRequired',
-        overlayName: OVERLAY_NAMES.uasfm,
         overlayLayerId: 'UASFM50-poly',
         attribute: 'LAANC_REQUIRED',
         note: 'LAANC Required',
@@ -117,7 +96,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'laancRequired',
-        overlayName: OVERLAY_NAMES.uasfm,
         overlayLayerId: 'UASFM0-poly',
         attribute: 'LAANC_REQUIRED',
         note: 'LAANC Required',
@@ -127,7 +105,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'laancRequired',
-        overlayName: OVERLAY_NAMES.uasfm,
         overlayLayerId: 'UASFM200-poly',
         attribute: 'LAANC_REQUIRED',
         note: 'LAANC Required',
@@ -137,7 +114,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'laancRequired',
-        overlayName: OVERLAY_NAMES.uasfm,
         overlayLayerId: 'UASFM300-poly',
         attribute: 'LAANC_REQUIRED',
         note: 'LAANC Required',
@@ -147,7 +123,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'laancRequired',
-        overlayName: OVERLAY_NAMES.uasfm,
         overlayLayerId: 'UASFM400-poly',
         attribute: 'LAANC_REQUIRED',
         note: 'LAANC Required',
@@ -157,7 +132,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'airspaceSpecial',
-        overlayName: OVERLAY_NAMES.faaSpecialUse,
         overlayLayerId: '394-poly',
         attribute: 'TYPE_CODE',
         note: 'Airspace Special',
@@ -167,7 +141,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'airspaceSpecial',
-        overlayName: OVERLAY_NAMES.faaProhibited,
         overlayLayerId: '400-poly',
         attribute: 'REASON',
         note: 'NATIONAL SECURITY',
@@ -177,7 +150,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'airspaceSpecial',
-        overlayName: OVERLAY_NAMES.gcnpSfra,
         overlayLayerId: 'gcnp-sectors-fill',
         attribute: 'LOCAL_TYPE',
         note: 'Airspace Special',
@@ -187,7 +159,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'landManagerPermissionRequired',
-        overlayName: OVERLAY_NAMES.gcnpSfra,
         overlayLayerId: 'gcnp-sectors-fill',
         attribute: 'LOCAL_TYPE',
         note: 'Airspace Special',
@@ -197,7 +168,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'landManagerPermissionRequired',
-        overlayName: OVERLAY_NAMES.faaSpecialUse,
         overlayLayerId: '394-poly',
         attribute: 'TYPE_CODE',
         note: 'Airspace Special',
@@ -207,7 +177,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'landManagerPermissionRequired',
-        overlayName: OVERLAY_NAMES.faaProhibited,
         overlayLayerId: '400-poly',
         attribute: 'REASON',
         note: 'Land Manager Permission Required (Yes / No)',
@@ -217,7 +186,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'landManagerPermissionRequired',
-        overlayName: OVERLAY_NAMES.wilderness,
         overlayLayerId: 'wilderness-poly',
         attribute: 'Editor',
         note: 'Land Manager Permission Required (Yes / No)',
@@ -227,7 +195,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'landManager',
-        overlayName: OVERLAY_NAMES.landowner,
         overlayLayerId: 'landowner-poly',
         attribute: 'OWNERORMANAGINGAGENCY',
         note: 'Land Owner or Managing Agency',
@@ -256,7 +223,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'landManagerPermissionRequired',
-        overlayName: OVERLAY_NAMES.landowner,
         overlayLayerId: 'landowner-poly',
         attribute: 'OWNERORMANAGINGAGENCY',
         note: 'Land Manager Permission Required (Yes / No)',
@@ -285,7 +251,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'airspaceClass',
-        overlayName: OVERLAY_NAMES.airspaceClass,
         overlayLayerId: 'E4-poly',
         attribute: 'TYPE_CODE',
         note: 'Airspace Class',
@@ -295,7 +260,6 @@ export const overlayFieldMap: OverlayFieldMapping[] = [
     },
     {
         formField: 'airspaceClass',
-        overlayName: OVERLAY_NAMES.airspaceClass,
         overlayLayerId: 'D-poly',
         attribute: 'TYPE_CODE',
         note: 'Airspace Class',

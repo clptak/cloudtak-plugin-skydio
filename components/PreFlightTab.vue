@@ -972,16 +972,14 @@ import {
     pdfToBase64,
 } from '../utils/preflightPdf';
 import { attachReportToMission } from '../utils/missionAttachment';
-import { useMapStore } from '../../../src/stores/map.ts';
 import { pickPoint } from '../lib/location-picker.ts';
 import { getPluginMap } from '../lib/plugin-map.ts';
 import {
     OVERLAY_FIELD_MAP,
     OVERLAY_FIELD_GROUPS,
     mappingsForFields,
-    overlayNamesForMappings,
-    mappingsWithOverlayName,
-    fieldsMissingOverlayName,
+    layerIdsForMappings,
+    fieldsForLayerIds,
     type PreflightAutofillField,
 } from '../lib/overlay-field-map.ts';
 import {
@@ -989,12 +987,12 @@ import {
     inspectAtPoint,
     debugAtPoint,
     recenterTo,
-    type OverlayLike,
     type RecenterMap,
     type InspectResult,
     type DetectDebug,
 } from '../lib/overlay-detect.ts';
-import { ensureOverlaysVisible, type OverlayStoreLike } from '../lib/overlay-ensure.ts';
+import { ensureOverlaysVisible } from '../lib/overlay-ensure.ts';
+import OverlayManager from '../../../src/base/overlay.ts';
 
 const props = defineProps<{
     missionGuid?: string;
@@ -1279,25 +1277,6 @@ const detectError = ref(false);
 const inspectResults = ref<InspectResult[]>([]);
 const debugResult = ref<DetectDebug | null>(null);
 
-// The core store type is reached through an unofficial surface; cast through `unknown`
-// to a minimal shape (same approach as SkydioPanel's MapSelectionState cast).
-interface MapStoreLike {
-    map?: RecenterMap;
-    overlays?: OverlayLike[];
-}
-
-function mapStoreLike(): MapStoreLike {
-    return useMapStore() as unknown as MapStoreLike;
-}
-
-function overlayStoreLike(): OverlayStoreLike {
-    return useMapStore() as unknown as OverlayStoreLike;
-}
-
-function overlayList(): OverlayLike[] {
-    return mapStoreLike().overlays ?? [];
-}
-
 async function recenterMap(lonLat: [number, number]): Promise<RecenterMap | null> {
     return recenterTo(getPluginMap() as unknown as RecenterMap | null, lonLat);
 }
@@ -1316,28 +1295,25 @@ async function detectOverlays(opts: { fields?: PreflightAutofillField[] } = {}):
     const point = mapPoint.value;
     if (!point) return;
 
-    const requested = opts.fields?.length
+    const mapping = opts.fields?.length
         ? mappingsForFields(opts.fields)
         : OVERLAY_FIELD_MAP;
 
-    const mapping = mappingsWithOverlayName(requested);
     if (!mapping.length) {
         detectError.value = true;
         detectNotice.value = 'No overlays are configured for these fields. Set overlayFieldMap in the '
             + 'Skydio plugin\'s config.local.ts, then rebuild CloudTAK.';
         return;
     }
-    const skippedFields = fieldsMissingOverlayName(requested);
 
     detecting.value = true;
     detectNotice.value = null;
     detectError.value = false;
 
-    const overlayNames = overlayNamesForMappings(mapping);
     let restoreOverlays: (() => Promise<void>) | null = null;
 
     try {
-        const ensured = await ensureOverlaysVisible(overlayStoreLike(), overlayNames);
+        const ensured = await ensureOverlaysVisible(OverlayManager.loaded, layerIdsForMappings(mapping));
         restoreOverlays = ensured.restore;
 
         const lonLat: [number, number] = [point.lon, point.lat];
@@ -1361,24 +1337,17 @@ async function detectOverlays(opts: { fields?: PreflightAutofillField[] } = {}):
         if (ensured.enabled.length) {
             parts.push(`Enabled ${ensured.enabled.length} overlay(s) temporarily.`);
         }
-        if (ensured.missing.length) {
-            parts.push(`Missing overlay(s): ${ensured.missing.join(', ')}. `
-                + 'Add them to the Overlays menu or lib/overlay-sources.ts.');
-        }
         if (filled.length) {
             parts.push(`Auto-filled ${filled.length} field(s): ${filled.join(', ')}.`);
-            detectError.value = ensured.missing.length > 0;
-        } else if (ensured.missing.length) {
-            detectError.value = true;
-            parts.push('No values detected — missing overlays could not be loaded.');
-        } else {
+        } else if (!ensured.missing.length) {
             parts.push('No mapped overlay attributes found at this point — use Inspect to verify ids/keys.');
         }
-        if (skippedFields.length) {
-            // A skipped overlay can hide a restriction, so never present this result as complete.
+        if (ensured.missing.length) {
+            // A missing overlay can hide a restriction, so never present this result as complete.
             detectError.value = true;
-            parts.push('Not checked against every overlay, because some names are not set in '
-                + `config.local.ts. Verify manually: ${skippedFields.join(', ')}.`);
+            parts.push(`No loaded overlay has these layers: ${ensured.missing.join(', ')}. `
+                + 'Add the overlay to the Overlays menu or correct overlayFieldMap in config.local.ts. '
+                + `Verify manually: ${fieldsForLayerIds(mapping, ensured.missing).join(', ')}.`);
         }
         detectNotice.value = parts.join(' ');
     } catch (err) {
@@ -1416,7 +1385,7 @@ async function inspectOverlays(): Promise<void> {
         const hits = inspectAtPoint(map, lonLat);
         inspectResults.value = hits;
         if (!hits.length) {
-            debugResult.value = debugAtPoint(map, overlayList(), lonLat);
+            debugResult.value = debugAtPoint(map, OverlayManager.loaded, lonLat);
             detectNotice.value = 'No overlay features matched at this point. See debug info below.';
         }
     } catch (err) {

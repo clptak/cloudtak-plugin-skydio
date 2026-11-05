@@ -19,22 +19,12 @@ interface StubMap {
     once(ev: string, cb: () => void): void;
 }
 
-interface StubOverlay {
-    name: string;
-    visible: boolean;
-    update(body: { visible?: boolean }): Promise<void>;
-}
-
 /** Stub for CloudTAK host map store when typechecking outside CloudTAK. */
 export function useMapStore(): {
     mission?: { meta: { guid: string }; token?: string };
     toImport: Feature[];
     selected: Map<string, { as_feature?: () => Feature }>;
     map: StubMap;
-    overlays?: StubOverlay[];
-    initOverlays?: () => Promise<void>;
-    getOverlayByName?: (name: string) => StubOverlay | null;
-    getOverlayById?: (id: number) => StubOverlay | null;
 } {
     const stubMap: StubMap = {
         project: () => ({ x: 0, y: 0 }),
