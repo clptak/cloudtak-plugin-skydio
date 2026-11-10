@@ -16,9 +16,9 @@
 //   on every restart and can differ between users. Detection matches on the STABLE suffix (the part
 //   after the leading "N-"), so `overlayLayerId` survives id resets.
 //
-// On-demand overlays:
-//   The Detect buttons find the loaded overlays that own the rows' layer ids, temporarily turn on
-//   the ones that are off, then turn those back off. You do not need to leave all layers on in the UI.
+// Detect does not need the overlay on the map:
+//   It finds the overlay in CloudTAK's catalog from the layer id and reads its tiles directly, so
+//   nobody has to add or turn on anything. Inspect does need the overlay on, once, while you author rows.
 
 import type { PreflightFormState } from '../types.ts';
 import { deploymentOverlayFieldMap } from '../storage/deploymentDefaults.ts';
@@ -36,6 +36,12 @@ export interface OverlayFieldMapping {
      * Do not use the full runtime id ("1217-UASFM100-poly"): its leading "N-" changes on restart.
      */
     overlayLayerId: string;
+    /**
+     * Catalog id of the overlay (the {id} in /api/basemap/{id}). Only needed when the overlay uses
+     * CloudTAK's default style, because its layer ids then contain a per-person number that no
+     * catalog entry records. Leave it out when the overlay has its own style.
+     */
+    basemapId?: number;
     /** Property key on that overlay's features whose value to use, e.g. "CEILING". */
     attribute: string;
     /**
@@ -47,7 +53,7 @@ export interface OverlayFieldMapping {
     note?: string;
 }
 
-/** Per-field Detect buttons in the PreFlight tab — only overlays for these fields are enabled. */
+/** Per-field Detect buttons in the PreFlight tab — only overlays for these fields are read. */
 export interface OverlayFieldGroup {
     id: string;
     label: string;
@@ -75,10 +81,6 @@ export const OVERLAY_FIELD_GROUPS: OverlayFieldGroup[] = [
 export function mappingsForFields(fields: PreflightAutofillField[]): OverlayFieldMapping[] {
     const want = new Set(fields);
     return OVERLAY_FIELD_MAP.filter((row) => want.has(row.formField));
-}
-
-export function layerIdsForMappings(mappings: OverlayFieldMapping[]): string[] {
-    return [...new Set(mappings.map((row) => row.overlayLayerId.trim()).filter(Boolean))];
 }
 
 /** Form fields with at least one row that depends on one of these layer ids. */

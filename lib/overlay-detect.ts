@@ -1,6 +1,7 @@
-// Query GeoJSON/vector overlay attributes at a point, for the PreFlight tab.
+// Inspect rendered overlay attributes at a point, and the id and value helpers PreFlight Detect
+// shares with lib/overlay-tiles.ts. Detect itself reads tiles and does not use the map.
 //
-// Mechanism: project the point's lon/lat to a screen pixel, query a small box around it with
+// Mechanism for Inspect: project the point's lon/lat to a screen pixel, query a small box around it with
 // map.queryRenderedFeatures(box), then read overlay features rendered there.
 //
 // Two hard-won rules baked in here (see docs/PATTERN-overlay-attribute-autofill.md):
@@ -10,10 +11,10 @@
 //      differ between users, so `1202-136-poly` may become `1530-136-poly`. We therefore match on
 //      the STABLE suffix (strip a single leading `\d+-`), never the full runtime id.
 //
-// Only vector/geojson overlays that are toggled ON carry attributes; raster (MapServer image)
-// overlays return nothing here.
+// Only vector/geojson overlays that are in the Overlays menu and toggled ON appear here; raster
+// (MapServer image) overlays return nothing.
 
-import type { OverlayFieldMapping, PreflightAutofillField } from './overlay-field-map.ts';
+import type { PreflightAutofillField } from './overlay-field-map.ts';
 
 type PixelBox = [[number, number], [number, number]];
 
@@ -168,31 +169,6 @@ export async function recenterTo(
         setTimeout(done, 4000); // fallback if 'idle' never fires
     });
     return map;
-}
-
-/** Apply the static mapping at the point: read each mapped attribute from its overlay layer. */
-export function detectValues(
-    map: MapLike,
-    lonLat: [number, number],
-    mapping: OverlayFieldMapping[],
-): DetectResult[] {
-    if (!mapping.length) return [];
-    const feats = map
-        .queryRenderedFeatures(boxAround(map, lonLat))
-        .filter((f) => OVERLAY_LAYER_RE.test(f.layer.id));
-
-    return mapping.map((m) => {
-        let value: string | null = null;
-        for (const f of feats) {
-            if (!layerMatches(f.layer.id, m.overlayLayerId)) continue;
-            const raw = (f.properties ?? {})[m.attribute];
-            if (raw != null && raw !== '') {
-                value = translateValue(String(raw), m.valueMap);
-                break; // first matching feature wins
-            }
-        }
-        return { formField: m.formField, overlayLayerId: m.overlayLayerId, attribute: m.attribute, value };
-    });
 }
 
 /** Translate an overlay value to its form equivalent via the row's valueMap (normalized key match). */

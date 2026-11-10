@@ -39,8 +39,8 @@
 
                 <div class='mb-3'>
                     <div class='form-hint mb-2'>
-                        Detect turns on only the overlays needed for the selected fields, reads
-                        attributes at the point, then turns those layers back off.
+                        Detect reads the overlay data at the point directly. It does not move the
+                        map or change your Overlays menu, and no overlay needs to be turned on.
                     </div>
                     <div class='d-flex flex-wrap gap-2'>
                         <button
@@ -979,12 +979,10 @@ import {
     OVERLAY_FIELD_MAP,
     OVERLAY_FIELD_GROUPS,
     mappingsForFields,
-    layerIdsForMappings,
     fieldsForLayerIds,
     type PreflightAutofillField,
 } from '../lib/overlay-field-map.ts';
 import {
-    detectValues,
     inspectAtPoint,
     debugAtPoint,
     recenterTo,
@@ -992,7 +990,8 @@ import {
     type InspectResult,
     type DetectDebug,
 } from '../lib/overlay-detect.ts';
-import { ensureOverlaysVisible } from '../lib/overlay-ensure.ts';
+import { readOverlaysAtPoint, type LoadedOverlay } from '../lib/overlay-tiles.ts';
+import { overlayTileApi } from '../lib/overlay-tile-api.ts';
 import OverlayManager from '../../../src/base/overlay.ts';
 
 const props = defineProps<{
@@ -1311,23 +1310,16 @@ async function detectOverlays(opts: { fields?: PreflightAutofillField[] } = {}):
     detectNotice.value = null;
     detectError.value = false;
 
-    let restoreOverlays: (() => Promise<void>) | null = null;
-
     try {
-        const ensured = await ensureOverlaysVisible(OverlayManager.loaded, layerIdsForMappings(mapping));
-        restoreOverlays = ensured.restore;
+        const read = await readOverlaysAtPoint(
+            [point.lon, point.lat],
+            mapping,
+            overlayTileApi,
+            OverlayManager.loaded as unknown as LoadedOverlay[],
+        );
 
-        const lonLat: [number, number] = [point.lon, point.lat];
-        const map = await recenterMap(lonLat);
-        if (!map) {
-            detectError.value = true;
-            detectNotice.value = 'Map is not available.';
-            return;
-        }
-
-        const results = detectValues(map, lonLat, mapping);
         const filled: string[] = [];
-        for (const result of results) {
+        for (const result of read.results) {
             if (result.value != null) {
                 applyDetectedValue(result.formField, result.value);
                 filled.push(`${result.formField} ← ${result.value}`);
@@ -1335,33 +1327,30 @@ async function detectOverlays(opts: { fields?: PreflightAutofillField[] } = {}):
         }
 
         const parts: string[] = [];
-        if (ensured.enabled.length) {
-            parts.push(`Enabled ${ensured.enabled.length} overlay(s) temporarily.`);
-        }
         if (filled.length) {
             parts.push(`Auto-filled ${filled.length} field(s): ${filled.join(', ')}.`);
-        } else if (!ensured.missing.length) {
-            parts.push('No mapped overlay attributes found at this point — use Inspect to verify ids/keys.');
+        } else if (!read.missing.length && !read.unreadable.length) {
+            parts.push('The configured overlays have no mapped attributes at this point.');
         }
-        if (ensured.missing.length) {
-            // A missing overlay can hide a restriction, so never present this result as complete.
+        // A layer that was not read can hide a restriction, so never present this result as complete.
+        if (read.missing.length) {
             detectError.value = true;
-            parts.push(`No loaded overlay has these layers: ${ensured.missing.join(', ')}. `
-                + 'Add the overlay to the Overlays menu or correct overlayFieldMap in config.local.ts. '
-                + `Verify manually: ${fieldsForLayerIds(mapping, ensured.missing).join(', ')}.`);
+            parts.push(`No overlay you can access has these layers: ${read.missing.join(', ')}. `
+                + 'Correct overlayFieldMap in config.local.ts or ask an administrator. '
+                + `Verify manually: ${fieldsForLayerIds(mapping, read.missing).join(', ')}.`);
+        }
+        if (read.unreadable.length) {
+            detectError.value = true;
+            parts.push(`Could not read these overlay layers: ${read.unreadable.join(', ')}. `
+                + `Verify manually: ${fieldsForLayerIds(mapping, read.unreadable).join(', ')}.`);
         }
         detectNotice.value = parts.join(' ');
     } catch (err) {
         detectError.value = true;
-        detectNotice.value = err instanceof Error ? err.message : 'Overlay detection failed.';
+        detectNotice.value = err instanceof Error
+            ? `Overlay detection failed, so verify every field manually: ${err.message}`
+            : 'Overlay detection failed, so verify every field manually.';
     } finally {
-        if (restoreOverlays) {
-            try {
-                await restoreOverlays();
-            } catch {
-                // Best-effort restore; detection result already surfaced above.
-            }
-        }
         detecting.value = false;
     }
 }

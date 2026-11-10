@@ -23,8 +23,13 @@ export const deploymentDefaults: DeploymentSettings = {
 
 /**
  * Which overlay attribute fills which PreFlight field. Detect finds each overlay
- * from its layer id, so overlay names and renames do not matter, but the overlay
- * must be in the person's Overlays menu.
+ * in CloudTAK's catalog from its layer id and reads its tiles, so overlay names do
+ * not matter and nobody has to add or turn on an overlay. The person's account
+ * must be able to see the overlay in the catalog.
+ *
+ * If an overlay uses CloudTAK's default style, the catalog has no layer ids for it,
+ * so add `basemapId: <catalog id>` to its rows. A default-style overlay is read with
+ * no style filter.
  *
  * These rows are a working example for northern Arizona. They expect overlays for
  * the FAA UAS Facility Map (UASFM*), FAA Special Use Airspace (394-poly), FAA

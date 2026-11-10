@@ -3,6 +3,8 @@ interface StubOverlay {
     name: string;
     visible: boolean;
     type: string;
+    mode: string;
+    mode_id: string | null;
     styles: Array<{ id: string }>;
     _error?: Error;
     update(body: { visible?: boolean }): Promise<void>;
