@@ -49,7 +49,7 @@ function parseApiError(res: Response, errText: string): string | null {
 
 /**
  * Upload a PDF to the active mission the same way CloudTAK Mission Files does:
- * POST /api/marti/missions/:guid/upload?name=... with raw file bytes (no S3 attachment store).
+ * POST /api/marti/missions/:guid/upload?name=... as multipart/form-data (no S3 attachment store).
  */
 async function uploadToMission(
     missionGuid: string,
@@ -59,10 +59,14 @@ async function uploadToMission(
 ): Promise<void> {
     const safeName = fileName.replace(/^.*[/\\]/, '') || 'preflight-report.pdf';
     const buffer = await pdfBlob.arrayBuffer();
+    const body = new FormData();
+    body.append('file', new Blob([buffer], { type: 'application/pdf' }), safeName);
     const uploadUrl =
         `/api/marti/missions/${encodeURIComponent(missionGuid)}/upload`
         + `?name=${encodeURIComponent(safeName)}`;
 
+    // Content-Type must be left unset so the browser adds the multipart boundary;
+    // CloudTAK rejects raw request bodies with a 400.
     const headers: Record<string, string> = {};
     if (missionToken) {
         headers.MissionAuthorization = missionToken;
@@ -71,7 +75,7 @@ async function uploadToMission(
     const res = await cloudtakFetch(uploadUrl, {
         method: 'POST',
         headers,
-        body: new Blob([buffer], { type: 'application/pdf' }),
+        body,
     });
 
     if (!res.ok) {
